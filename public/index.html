@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <title>Generator Rozliczenia Godzin - Emerlog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Biblioteki -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.7.0/docx.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.umd.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 20px; }
     .container { background: #fff; padding: 20px; border-radius: 8px; max-width: 900px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
@@ -78,26 +79,27 @@
     if (!output) return alert("Najpierw wygeneruj tabelę");
 
     const { Document, Paragraph, Table, TableRow, TableCell, HeadingLevel, Packer } = window.docx;
-const doc = new Document();
+
+    const doc = new Document();
     const children = [];
-    children.push(new docx.Paragraph({ text: `Rozliczenie godzin - ${name}`, heading: docx.HeadingLevel.HEADING_1 }));
+    children.push(new Paragraph({ text: `Rozliczenie godzin - ${name}`, heading: HeadingLevel.HEADING_1 }));
 
     const rows = Array.from(output.querySelectorAll("table tr")).map(row => {
-      return new docx.TableRow({
+      return new TableRow({
         children: Array.from(row.querySelectorAll("td,th")).map(cell => {
-          return new docx.TableCell({
-            children: [new docx.Paragraph(cell.innerText)],
+          return new TableCell({
+            children: [new Paragraph(cell.innerText)],
           });
         })
       });
     });
 
-    const table = new docx.Table({ rows });
+    const table = new Table({ rows });
     children.push(table);
 
     doc.addSection({ children });
 
-    const blob = await docx.Packer.toBlob(doc);
+    const blob = await Packer.toBlob(doc);
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result.split(",")[1];
