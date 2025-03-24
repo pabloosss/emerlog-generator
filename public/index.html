@@ -2,105 +2,119 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Emerlog Generator</title>
+  <title>Generator Rozliczenia Godzin - Emerlog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.7.0/docx.umd.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f2f2f2; }
-    h1 { color: #333; }
-    .container { background: #fff; padding: 20px; border-radius: 8px; max-width: 800px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    input, button { padding: 10px; margin: 5px 0; width: 100%; max-width: 300px; }
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 20px; }
+    .container { background: #fff; padding: 20px; border-radius: 8px; max-width: 900px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; margin-bottom: 20px; }
+    label, input, button, select { display: block; margin: 10px 0; }
+    input, select { padding: 8px; width: 100%; max-width: 300px; }
+    button { padding: 10px 20px; cursor: pointer; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background: #eee; }
-    #buttons { display: flex; gap: 10px; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background-color: #f0f0f0; }
+    #buttons { display: flex; gap: 10px; margin-top: 15px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Emerlog Generator Rozliczenia</h1>
-    <label for="name">Imię i nazwisko:</label>
-    <input type="text" id="name" placeholder="Wpisz swoje imię i nazwisko" required>
+<div class="container">
+  <h1>Generator Rozliczenia Godzin</h1>
 
-    <label for="hours">Liczba godzin do rozliczenia:</label>
-    <input type="number" id="hours" placeholder="Np. 60" required>
+  <label for="name">Imię i nazwisko:</label>
+  <input type="text" id="name" placeholder="Jan Kowalski">
 
-    <button onclick="generateTable()">Generuj rozliczenie</button>
+  <label for="hours">Liczba godzin:</label>
+  <input type="number" id="hours" min="1" placeholder="Np. 80">
 
-    <div id="output"></div>
+  <button onclick="generateTable()">Generuj tabelę</button>
 
-    <div id="buttons" style="display:none;">
-      <button onclick="downloadPDF()">Pobierz jako PDF</button>
-      <button id="sendEmail">Wyślij e-mailem</button>
-    </div>
+  <div id="output"></div>
+  <div id="buttons" style="display:none;">
+    <button onclick="downloadPDF()">Pobierz PDF</button>
+    <button onclick="sendWord()">Wyślij Word e-mailem</button>
   </div>
+</div>
 
-  <script>
-    function generateTable() {
-      const name = document.getElementById("name").value.trim();
-      const hours = parseInt(document.getElementById("hours").value);
-      if (!name || isNaN(hours) || hours <= 0) {
-        alert("Wprowadź poprawne dane.");
-        return;
-      }
+<script>
+  function generateTable() {
+    const name = document.getElementById("name").value.trim();
+    const hours = parseInt(document.getElementById("hours").value);
+    if (!name || isNaN(hours) || hours <= 0) return alert("Podaj poprawne dane");
 
-      const days = Math.ceil(hours / 8);
-      let remaining = hours;
-      let html = `<h2>Rozliczenie dla: ${name}</h2><table><tr><th>Dzień</th><th>Godziny</th></tr>`;
+    const days = Math.ceil(hours / 8);
+    let remaining = hours;
+    let html = `<h2>Rozliczenie godzin - ${name}</h2><table><tr><th>Dzień</th><th>Liczba godzin</th></tr>`;
 
-      for (let i = 1; i <= days; i++) {
-        let h = (remaining >= 8) ? 8 : remaining;
-        html += `<tr><td>${i}</td><td>${h}</td></tr>`;
-        remaining -= h;
-      }
-      html += `<tr><th>Suma</th><th>${hours}</th></tr></table>`;
-
-      document.getElementById("output").innerHTML = html;
-      document.getElementById("buttons").style.display = "flex";
+    for (let i = 1; i <= days; i++) {
+      const h = Math.min(8, remaining);
+      html += `<tr><td>${i}</td><td>${h}</td></tr>`;
+      remaining -= h;
     }
+    html += `<tr><th>Suma</th><th>${hours}</th></tr></table>`;
 
-    async function downloadPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const output = document.getElementById("output");
-      const canvas = await html2canvas(output);
-      const imgData = canvas.toDataURL("image/png");
-      doc.addImage(imgData, "PNG", 10, 10, 190, 0);
-      doc.save("rozliczenie.pdf");
-    }
+    document.getElementById("output").innerHTML = html;
+    document.getElementById("buttons").style.display = "flex";
+  }
 
-    document.getElementById("sendEmail").addEventListener("click", async () => {
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF("portrait", "pt", "a4");
+  async function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const output = document.getElementById("output");
+    const canvas = await html2canvas(output);
+    const imgData = canvas.toDataURL("image/png");
+    doc.addImage(imgData, "PNG", 10, 10, 190, 0);
+    doc.save("rozliczenie.pdf");
+  }
 
-      const outputEl = document.getElementById("output");
-      if (!outputEl) return alert("Brak tabeli do wysłania!");
+  async function sendWord() {
+    const name = document.getElementById("name").value.trim();
+    if (!name) return alert("Wprowadź imię i nazwisko");
 
-      const canvas = await html2canvas(outputEl, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-      pdf.addImage(imgData, "PNG", 20, 20, 550, 750);
+    const output = document.getElementById("output");
+    if (!output) return alert("Najpierw wygeneruj tabelę");
 
-      const name = document.getElementById("name").value.trim();
-      const pdfBase64 = pdf.output("datauristring").split(",")[1];
+    const doc = new window.docx.Document();
+    const children = [];
+    children.push(new docx.Paragraph({ text: `Rozliczenie godzin - ${name}`, heading: docx.HeadingLevel.HEADING_1 }));
 
-      try {
-        const res = await fetch("/send-pdf", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, pdfData: pdfBase64 })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          alert("Wysłano e-mail z PDF!");
-        } else {
-          alert("Błąd podczas wysyłania e-maila.");
-        }
-      } catch (err) {
-        console.error("Błąd wysyłki:", err);
-        alert("Wystąpił problem przy wysyłaniu e-maila.");
-      }
+    const rows = Array.from(output.querySelectorAll("table tr")).map(row => {
+      return new docx.TableRow({
+        children: Array.from(row.querySelectorAll("td,th")).map(cell => {
+          return new docx.TableCell({
+            children: [new docx.Paragraph(cell.innerText)],
+          });
+        })
+      });
     });
-  </script>
+
+    const table = new docx.Table({ rows });
+    children.push(table);
+
+    doc.addSection({ children });
+
+    const blob = await docx.Packer.toBlob(doc);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result.split(",")[1];
+
+      const res = await fetch("/send-docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, docxData: base64 })
+      });
+
+      if (res.ok) {
+        alert("Wysłano Worda na e-mail!");
+      } else {
+        alert("Błąd wysyłania Worda");
+      }
+    };
+    reader.readAsDataURL(blob);
+  }
+</script>
 </body>
 </html>
