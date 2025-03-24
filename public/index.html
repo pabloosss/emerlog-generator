@@ -1,0 +1,57 @@
+<!-- Twoj zaktualizowany index.html z przyciskiem "Wyślij PDF" i fetchem do /send-pdf -->
+<!-- Wstawione na koncu, po downloadPDF -->
+<script>
+  // Wysylanie PDFa na maila (przycisk wyślij)
+  const sendButton = document.createElement("button");
+  sendButton.className = "btn btn-warning mt-2";
+  sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> Wyślij PDF na e-mail';
+  document.getElementById("exportButtons").appendChild(sendButton);
+
+  sendButton.addEventListener("click", async () => {
+    const fullName = document.getElementById("name").value.trim();
+    if (!fullName) return alert("Uzupełnij imię i nazwisko");
+
+    const outputElement = document.getElementById("output");
+    const vacationElement = document.getElementById("vacationRequest");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    await html2canvas(outputElement).then(canvas => {
+      const imgData = canvas.toDataURL("image/png");
+      const props = doc.getImageProperties(imgData);
+      const pdfWidth = doc.internal.pageSize.getWidth();
+      const pdfHeight = (props.height * pdfWidth) / props.width;
+      doc.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    });
+
+    if (vacationElement && vacationElement.innerHTML.trim() !== "") {
+      doc.addPage();
+      await html2canvas(vacationElement).then(canvas => {
+        const imgData = canvas.toDataURL("image/png");
+        const props = doc.getImageProperties(imgData);
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = (props.height * pdfWidth) / props.width;
+        doc.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      });
+    }
+
+    const blob = doc.output("blob");
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64PDF = reader.result.split(",")[1];
+
+      const res = await fetch("/send-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: fullName, pdfData: base64PDF })
+      });
+
+      if (res.ok) {
+        alert("PDF został wysłany na e-mail!");
+      } else {
+        alert("Błąd podczas wysyłania PDF-a.");
+      }
+    };
+    reader.readAsDataURL(blob);
+  });
+</script>
