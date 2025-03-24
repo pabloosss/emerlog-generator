@@ -1,57 +1,105 @@
-<!-- Twoj zaktualizowany index.html z przyciskiem "Wyślij PDF" i fetchem do /send-pdf -->
-<!-- Wstawione na koncu, po downloadPDF -->
-<script>
-  // Wysylanie PDFa na maila (przycisk wyślij)
-  const sendButton = document.createElement("button");
-  sendButton.className = "btn btn-warning mt-2";
-  sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> Wyślij PDF na e-mail';
-  document.getElementById("exportButtons").appendChild(sendButton);
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Emerlog Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f2f2f2; }
+    h1 { color: #333; }
+    .container { background: #fff; padding: 20px; border-radius: 8px; max-width: 800px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; max-width: 300px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #eee; }
+    #buttons { display: flex; gap: 10px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Emerlog Generator Rozliczenia</h1>
+    <label for="name">Imię i nazwisko:</label>
+    <input type="text" id="name" placeholder="Wpisz swoje imię i nazwisko" required>
 
-  sendButton.addEventListener("click", async () => {
-    const fullName = document.getElementById("name").value.trim();
-    if (!fullName) return alert("Uzupełnij imię i nazwisko");
+    <label for="hours">Liczba godzin do rozliczenia:</label>
+    <input type="number" id="hours" placeholder="Np. 60" required>
 
-    const outputElement = document.getElementById("output");
-    const vacationElement = document.getElementById("vacationRequest");
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    <button onclick="generateTable()">Generuj rozliczenie</button>
 
-    await html2canvas(outputElement).then(canvas => {
-      const imgData = canvas.toDataURL("image/png");
-      const props = doc.getImageProperties(imgData);
-      const pdfWidth = doc.internal.pageSize.getWidth();
-      const pdfHeight = (props.height * pdfWidth) / props.width;
-      doc.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    });
+    <div id="output"></div>
 
-    if (vacationElement && vacationElement.innerHTML.trim() !== "") {
-      doc.addPage();
-      await html2canvas(vacationElement).then(canvas => {
-        const imgData = canvas.toDataURL("image/png");
-        const props = doc.getImageProperties(imgData);
-        const pdfWidth = doc.internal.pageSize.getWidth();
-        const pdfHeight = (props.height * pdfWidth) / props.width;
-        doc.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      });
+    <div id="buttons" style="display:none;">
+      <button onclick="downloadPDF()">Pobierz jako PDF</button>
+      <button onclick="sendPDF()">Wyślij e-mailem</button>
+    </div>
+  </div>
+
+  <script>
+    function generateTable() {
+      const name = document.getElementById("name").value.trim();
+      const hours = parseInt(document.getElementById("hours").value);
+      if (!name || isNaN(hours) || hours <= 0) {
+        alert("Wprowadź poprawne dane.");
+        return;
+      }
+
+      const days = Math.ceil(hours / 8);
+      let remaining = hours;
+      let html = `<h2>Rozliczenie dla: ${name}</h2><table><tr><th>Dzień</th><th>Godziny</th></tr>`;
+
+      for (let i = 1; i <= days; i++) {
+        let h = (remaining >= 8) ? 8 : remaining;
+        html += `<tr><td>${i}</td><td>${h}</td></tr>`;
+        remaining -= h;
+      }
+      html += `<tr><th>Suma</th><th>${hours}</th></tr></table>`;
+
+      document.getElementById("output").innerHTML = html;
+      document.getElementById("buttons").style.display = "flex";
     }
 
-    const blob = doc.output("blob");
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64PDF = reader.result.split(",")[1];
+    async function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const output = document.getElementById("output");
+      const canvas = await html2canvas(output);
+      const imgData = canvas.toDataURL("image/png");
+      doc.addImage(imgData, "PNG", 10, 10, 190, 0);
+      doc.save("rozliczenie.pdf");
+    }
 
-      const res = await fetch("/send-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: fullName, pdfData: base64PDF })
-      });
+    async function sendPDF() {
+      const name = document.getElementById("name").value.trim();
+      if (!name) return alert("Wprowadź imię i nazwisko przed wysłaniem.");
 
-      if (res.ok) {
-        alert("PDF został wysłany na e-mail!");
-      } else {
-        alert("Błąd podczas wysyłania PDF-a.");
-      }
-    };
-    reader.readAsDataURL(blob);
-  });
-</script>
+      const output = document.getElementById("output");
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const canvas = await html2canvas(output);
+      const imgData = canvas.toDataURL("image/png");
+      doc.addImage(imgData, "PNG", 10, 10, 190, 0);
+
+      const blob = doc.output("blob");
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64PDF = reader.result.split(",")[1];
+
+        const res = await fetch("/send-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, pdfData: base64PDF })
+        });
+
+        if (res.ok) {
+          alert("PDF został wysłany na e-mail!");
+        } else {
+          alert("Błąd podczas wysyłania PDF-a.");
+        }
+      };
+      reader.readAsDataURL(blob);
+    }
+  </script>
+</body>
+</html>
