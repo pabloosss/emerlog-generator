@@ -11,12 +11,12 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json({ limit: "10mb" })); // Ustawiamy limit na duże PDFy
+app.use(bodyParser.json({ limit: "10mb" })); // obsługa JSON z limitem 10mb
+app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" })); // obsługa urlencoded (fallback/form)
 
-// Serwuj pliki statyczne (HTML, CSS, JS) z folderu "public"
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"))); // folder publiczny
 
-// Prosty endpoint testowy - sprawdzenie, czy serwer działa
+// Test endpoint
 app.get("/test", (req, res) => {
   res.json({ message: "Serwer działa poprawnie!" });
 });
@@ -36,7 +36,7 @@ app.post("/send-pdf", async (req, res) => {
 
     let mailOptions = {
       from: process.env.EMAIL_USER,
-      to: "pawel.ruchlicki@emerlog.eu", // stały adres docelowy
+      to: "pawel.ruchlicki@emerlog.eu",
       subject: `Rozliczenie godzin dla: ${name}`,
       text: "W załączniku przesyłamy PDF z harmonogramem.",
       attachments: [
@@ -57,7 +57,7 @@ app.post("/send-pdf", async (req, res) => {
   }
 });
 
-// Uruchom serwer
+// Start serwera
 app.listen(PORT, () => {
   console.log(`Serwer działa na porcie ${PORT}`);
 });
