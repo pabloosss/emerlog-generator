@@ -77,7 +77,8 @@
     const output = document.getElementById("output");
     if (!output) return alert("Najpierw wygeneruj tabelę");
 
-    const doc = new window.docx.Document();
+    const { Document, Paragraph, Table, TableRow, TableCell, HeadingLevel, Packer } = window.docx;
+const doc = new Document();
     const children = [];
     children.push(new docx.Paragraph({ text: `Rozliczenie godzin - ${name}`, heading: docx.HeadingLevel.HEADING_1 }));
 
