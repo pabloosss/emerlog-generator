@@ -32,7 +32,7 @@
 
     <div id="buttons" style="display:none;">
       <button onclick="downloadPDF()">Pobierz jako PDF</button>
-      <button onclick="sendPDF()">Wyślij e-mailem</button>
+      <button id="sendEmail">Wyślij e-mailem</button>
     </div>
   </div>
 
@@ -70,36 +70,37 @@
       doc.save("rozliczenie.pdf");
     }
 
-    async function sendPDF() {
-      const name = document.getElementById("name").value.trim();
-      if (!name) return alert("Wprowadź imię i nazwisko przed wysłaniem.");
-
-      const output = document.getElementById("output");
+    document.getElementById("sendEmail").addEventListener("click", async () => {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const canvas = await html2canvas(output);
+      const pdf = new jsPDF("portrait", "pt", "a4");
+
+      const outputEl = document.getElementById("output");
+      if (!outputEl) return alert("Brak tabeli do wysłania!");
+
+      const canvas = await html2canvas(outputEl, { scale: 2 });
       const imgData = canvas.toDataURL("image/png");
-      doc.addImage(imgData, "PNG", 10, 10, 190, 0);
+      pdf.addImage(imgData, "PNG", 20, 20, 550, 750);
 
-      const blob = doc.output("blob");
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64PDF = reader.result.split(",")[1];
+      const name = document.getElementById("name").value.trim();
+      const pdfBase64 = pdf.output("datauristring").split(",")[1];
 
+      try {
         const res = await fetch("/send-pdf", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, pdfData: base64PDF })
+          body: JSON.stringify({ name, pdfData: pdfBase64 })
         });
-
+        const data = await res.json();
         if (res.ok) {
-          alert("PDF został wysłany na e-mail!");
+          alert("Wysłano e-mail z PDF!");
         } else {
-          alert("Błąd podczas wysyłania PDF-a.");
+          alert("Błąd podczas wysyłania e-maila.");
         }
-      };
-      reader.readAsDataURL(blob);
-    }
+      } catch (err) {
+        console.error("Błąd wysyłki:", err);
+        alert("Wystąpił problem przy wysyłaniu e-maila.");
+      }
+    });
   </script>
 </body>
 </html>
