@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "10mb" })); // Ustawiamy limit na duże PDFy
 
 // Serwuj pliki statyczne (HTML, CSS, JS) z folderu "public"
 app.use(express.static(path.join(__dirname, "public")));
@@ -21,15 +21,11 @@ app.get("/test", (req, res) => {
   res.json({ message: "Serwer działa poprawnie!" });
 });
 
-// Uruchom serwer
-app.listen(PORT, () => {
-  console.log(`Serwer działa na porcie ${PORT}`);
+// Endpoint do przyjmowania PDF i wysyłki mailem
 app.post("/send-pdf", async (req, res) => {
   try {
-    // A) Odebrać od frontu jakieś dane (np. name, email itp.)
     const { name, pdfData } = req.body;
 
-    // B) Konfiguracja transportera
     let transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -38,23 +34,20 @@ app.post("/send-pdf", async (req, res) => {
       },
     });
 
-    // C) Treść maila
     let mailOptions = {
       from: process.env.EMAIL_USER,
-      to: "pawel.ruchlicki@emerlog.eu", // stały adres
+      to: "pawel.ruchlicki@emerlog.eu", // stały adres docelowy
       subject: `Rozliczenie godzin dla: ${name}`,
       text: "W załączniku przesyłamy PDF z harmonogramem.",
       attachments: [
         {
           filename: "harmonogram.pdf",
-          // "pdfData" musi być załącznikiem - np. Buffer lub base64
           content: Buffer.from(pdfData, "base64"),
           contentType: "application/pdf"
         }
       ]
     };
 
-    // D) Wysyłamy maila
     await transporter.sendMail(mailOptions);
     console.log("Mail wysłany!");
     return res.json({ message: "Mail wysłany OK" });
@@ -63,6 +56,8 @@ app.post("/send-pdf", async (req, res) => {
     return res.status(500).json({ error: "Błąd wysyłki maila" });
   }
 });
-  });
 
-
+// Uruchom serwer
+app.listen(PORT, () => {
+  console.log(`Serwer działa na porcie ${PORT}`);
+});
