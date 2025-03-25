@@ -1,0 +1,82 @@
+// Panel admina z loginem i hasłem (frontend + backend + pseudo baza)
+
+// 1. FRONTEND - dodaj na samej górze index.html:
+// <button id="adminPanelBtn" class="btn btn-warning">Panel Admina</button>
+
+// 2. Dodaj modala do HTML (na dole body):
+/*
+<div class="modal" id="adminModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Logowanie Admina</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="adminLogin" class="form-control mb-2" placeholder="Login">
+        <input type="password" id="adminPass" class="form-control mb-2" placeholder="Hasło">
+        <button id="loginBtn" class="btn btn-primary">Zaloguj</button>
+      </div>
+    </div>
+  </div>
+</div>
+*/
+
+// 3. Skrypt JS:
+document.getElementById("adminPanelBtn").addEventListener("click", () => {
+  const modal = new bootstrap.Modal(document.getElementById("adminModal"));
+  modal.show();
+});
+
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const login = document.getElementById("adminLogin").value.trim();
+  const pass = document.getElementById("adminPass").value.trim();
+
+  if (login === "ewa" && pass === "admin") {
+    alert("Zalogowano jako admin");
+    loadAdminPanel();
+  } else {
+    alert("Nieprawidłowy login lub hasło");
+  }
+});
+
+async function loadAdminPanel() {
+  const res = await fetch("/admin-data");
+  const data = await res.json();
+
+  let html = `<h3>Wysłane maile</h3><table class="table">
+    <thead><tr><th>Imię i nazwisko</th><th>Status</th></tr></thead><tbody>`;
+  data.forEach(row => {
+    html += `<tr><td>${row.name}</td><td>${row.sent ? "Wysłano" : "Nie wysłano"}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+
+  document.getElementById("output").innerHTML = html;
+}
+
+// 4. BACKEND - dodaj do server.js:
+const fs = require("fs");
+let mailDB = path.join(__dirname, "mailDB.json");
+
+app.get("/admin-data", (req, res) => {
+  if (fs.existsSync(mailDB)) {
+    const data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+    return res.json(data);
+  }
+  return res.json([]);
+});
+
+function logSentMail(name) {
+  let data = [];
+  if (fs.existsSync(mailDB)) {
+    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+  }
+  const index = data.findIndex(e => e.name === name);
+  if (index !== -1) data[index].sent = true;
+  else data.push({ name, sent: true });
+  fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
+}
+
+// W miejscu gdzie mail jest wysyłany:
+// await transporter.sendMail(mailOptions);
+// logSentMail(name);
