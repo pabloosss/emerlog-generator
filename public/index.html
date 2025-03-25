@@ -2,69 +2,95 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Generator PDF - Emerlog</title>
+  <title>Generator PDF</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- html2canvas + jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
-    body { font-family: Arial; background: #f0f0f0; padding: 20px; }
-    .container { background: white; padding: 20px; border-radius: 10px; max-width: 800px; margin: auto; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #aaa; padding: 8px; text-align: center; }
-    th { background: #ddd; }
-    button { margin-top: 15px; padding: 10px 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f4f4f4;
+    }
+    h1 { text-align: center; }
+    input, button {
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+    #output {
+      background: white;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td, th {
+      border: 1px solid #aaa;
+      padding: 8px;
+      text-align: center;
+    }
+    #sendPDF {
+      background-color: green;
+      color: white;
+      border: none;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Generator Rozliczenia</h1>
-    <label for="name">Imię i nazwisko:</label>
-    <input type="text" id="name" placeholder="Jan Kowalski"><br><br>
 
-    <label for="hours">Liczba godzin:</label>
-    <input type="number" id="hours" min="1" value="80"><br><br>
+  <h1>Generator Harmonogramu</h1>
+  <label>Imię i nazwisko:</label>
+  <input type="text" id="name" placeholder="Jan Kowalski" />
+  <label>Liczba godzin:</label>
+  <input type="number" id="hours" min="1" placeholder="Np. 80" />
+  <button onclick="generateTable()">Generuj tabelę</button>
 
-    <button onclick="generateTable()">Generuj tabelę</button>
-    <button onclick="sendPDF()">Wyślij PDF na maila</button>
-
-    <div id="output"></div>
-  </div>
+  <div id="output"></div>
+  <button id="sendPDF" style="display:none;">Wyślij tabelę e-mailem</button>
 
   <script>
-    function generateTable() {
+    async function generateTable() {
       const name = document.getElementById("name").value.trim();
       const hours = parseInt(document.getElementById("hours").value);
-      if (!name || isNaN(hours) || hours <= 0) return alert("Wprowadź dane!");
-
-      let html = `<h3>Rozliczenie godzin - ${name}</h3><table><tr><th>Dzień</th><th>Godziny</th></tr>`;
-      let remaining = hours;
-      let day = 1;
-
-      while (remaining > 0) {
-        const daily = Math.min(8, remaining);
-        html += `<tr><td>${day}</td><td>${daily}</td></tr>`;
-        remaining -= daily;
-        day++;
+      if (!name || isNaN(hours)) {
+        alert("Uzupełnij dane");
+        return;
       }
 
+      const days = Math.ceil(hours / 8);
+      let remaining = hours;
+      let html = `<h2>Harmonogram - ${name}</h2>`;
+      html += `<table><tr><th>Dzień</th><th>Liczba godzin</th></tr>`;
+      for (let i = 1; i <= days; i++) {
+        const h = Math.min(8, remaining);
+        html += `<tr><td>${i}</td><td>${h}</td></tr>`;
+        remaining -= h;
+      }
       html += `<tr><th>Suma</th><th>${hours}</th></tr></table>`;
       document.getElementById("output").innerHTML = html;
+      document.getElementById("sendPDF").style.display = "inline-block";
     }
 
-    async function sendPDF() {
+    document.getElementById("sendPDF").addEventListener("click", async () => {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const output = document.getElementById("output");
       const name = document.getElementById("name").value.trim();
+      const output = document.getElementById("output");
+      if (!name || !output.innerHTML.trim()) {
+        return alert("Najpierw wygeneruj tabelę");
+      }
 
-      if (!output || !output.innerHTML.trim()) return alert("Najpierw wygeneruj tabelę!");
-      if (!name) return alert("Podaj imię i nazwisko!");
-
-      const canvas = await html2canvas(output);
+      const canvas = await html2canvas(output, { scale: 2 });
       const imgData = canvas.toDataURL("image/png");
-      doc.addImage(imgData, "PNG", 10, 10, 190, 0);
-
-      const pdfBase64 = doc.output("datauristring").split(",")[1];
+      const pdf = new jsPDF("p", "pt", "a4");
+      pdf.addImage(imgData, "PNG", 20, 20, 555, 0);
+      const pdfBase64 = pdf.output("datauristring").split(",")[1];
 
       try {
         const res = await fetch("/send-pdf", {
@@ -72,18 +98,18 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, pdfData: pdfBase64 })
         });
-
         const data = await res.json();
         if (res.ok) {
           alert("PDF wysłany na maila!");
         } else {
-          alert("Błąd wysyłki PDF.");
+          alert("Błąd wysyłania: " + data.error);
         }
       } catch (err) {
         console.error("Błąd wysyłki PDF:", err);
-        alert("Wystąpił problem z wysyłką PDF.");
+        alert("Nie udało się wysłać PDF");
       }
-    }
+    });
   </script>
+
 </body>
 </html>
