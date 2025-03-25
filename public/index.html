@@ -1,87 +1,108 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Generator Godzin Rmsped</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }
+    .container { max-width: 700px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+    h1 { text-align: center; }
+    input, select, button { margin: 10px 0; padding: 8px; width: 100%; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+    #output { margin-top: 30px; }
+  </style>
 </head>
 <body>
-  <div class="container mt-4">
-    <h1>Generator Godzin Rmsped</h1>
-    <form id="generatorForm">
-      <div class="mb-3">
-        <label for="name" class="form-label">Imię i nazwisko:</label>
-        <input type="text" class="form-control" id="name" required>
-      </div>
-      <div class="mb-3">
-        <label for="month" class="form-label">Miesiąc (1-12):</label>
-        <input type="number" class="form-control" id="month" min="1" max="12" required>
-      </div>
-      <div class="mb-3">
-        <label for="year" class="form-label">Rok:</label>
-        <input type="number" class="form-control" id="year" value="2025" required>
-      </div>
-      <button type="submit" class="btn btn-primary">Generuj tabelę</button>
-    </form>
+  <div class="container">
+    <h1>Generator Harmonogramu</h1>
+    <label>Imię i nazwisko:</label>
+    <input type="text" id="name" placeholder="Jan Kowalski" />
+    <label>Miesiąc:</label>
+    <select id="month">
+      <option value="1">Styczeń</option><option value="2">Luty</option><option value="3">Marzec</option>
+      <option value="4">Kwiecień</option><option value="5">Maj</option><option value="6">Czerwiec</option>
+      <option value="7">Lipiec</option><option value="8">Sierpień</option><option value="9">Wrzesień</option>
+      <option value="10">Październik</option><option value="11">Listopad</option><option value="12">Grudzień</option>
+    </select>
+    <label>Rok:</label>
+    <input type="number" id="year" value="2025" />
+    <button onclick="generateAndSend()">Generuj i wyślij e-mailem</button>
 
-    <div id="output" class="mt-4"></div>
-    <button id="generatePDF" class="btn btn-success mt-3" style="display:none">Pobierz PDF</button>
+    <div id="output"></div>
   </div>
 
   <script>
-    document.getElementById("generatorForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      generateTable();
-    });
-
-    function generateTable() {
-      const name = document.getElementById("name").value;
+    async function generateAndSend() {
+      const name = document.getElementById("name").value.trim();
       const month = parseInt(document.getElementById("month").value);
       const year = parseInt(document.getElementById("year").value);
 
-      if (!name || !month || !year) {
-        alert("Uzupełnij wszystkie pola!");
+      if (!name || isNaN(month) || isNaN(year)) {
+        alert("Uzupełnij wszystkie pola.");
         return;
       }
 
-      const daysInMonth = new Date(year, month, 0).getDate();
-      let rows = "";
-      for (let i = 1; i <= daysInMonth; i++) {
-        const date = new Date(year, month - 1, i);
-        const weekday = date.toLocaleString("pl-PL", { weekday: "short" });
-        rows += `<tr><td>${i}</td><td>${date.toLocaleDateString()}</td><td>08:00</td><td>16:00</td><td>8</td><td>${name}</td><td></td></tr>`;
+      const date = new Date(year, month - 1, 1);
+      const tableRows = [];
+      let workDays = 0;
+
+      while (date.getMonth() === month - 1) {
+        const day = date.getDate();
+        const weekday = date.getDay(); // 0 = niedziela, 6 = sobota
+        if (weekday !== 0 && weekday !== 6) {
+          workDays++;
+          tableRows.push(`<tr><td>${day}.${month}.${year}</td><td>08:00 - 16:00</td><td>8</td><td>${name}</td></tr>`);
+        }
+        date.setDate(day + 1);
       }
 
-      const html = `
-        <table class="table table-bordered mt-3">
+      const tableHTML = `
+        <h2>Harmonogram pracy: ${name}</h2>
+        <table>
           <thead>
-            <tr><th>Dzień</th><th>Data</th><th>Początek</th><th>Koniec</th><th>Godzin</th><th>Podpis</th><th>Zleceniodawca</th></tr>
+            <tr><th>Dzień</th><th>Godziny pracy</th><th>Liczba godzin</th><th>Podpis zleceniobiorcy</th></tr>
           </thead>
-          <tbody>${rows}</tbody>
+          <tbody>${tableRows.join("")}</tbody>
+          <tfoot><tr><th colspan="2">Suma</th><th>${workDays * 8}</th><th></th></tr></tfoot>
         </table>
       `;
+      document.getElementById("output").innerHTML = tableHTML;
 
-      document.getElementById("output").innerHTML = html;
-      document.getElementById("generatePDF").style.display = "inline-block";
+      // Przechodzimy do tworzenia PDF i wysyłki
+      await sendPDF(name);
     }
 
-    document.getElementById("generatePDF").addEventListener("click", async () => {
+    async function sendPDF(name) {
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF();
+      const pdf = new jsPDF("p", "pt", "a4");
+
       const output = document.getElementById("output");
-
-      const canvas = await html2canvas(output);
+      const canvas = await html2canvas(output, { scale: 2 });
       const imgData = canvas.toDataURL("image/png");
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      pdf.addImage(imgData, "PNG", 20, 20, 555, 0);
+      const base64PDF = pdf.output("datauristring").split(",")[1];
 
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save("harmonogram.pdf");
-    });
+      try {
+        const res = await fetch("/send-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, pdfData: base64PDF }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("PDF został wysłany na e-mail!");
+        } else {
+          alert("Błąd wysyłania: " + data.error);
+        }
+      } catch (err) {
+        console.error("Błąd wysyłki PDF:", err);
+        alert("Wystąpił błąd podczas wysyłania PDF.");
+      }
+    }
   </script>
 </body>
 </html>
