@@ -2,133 +2,434 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Test Generowania i Wysyłania PDF</title>
-  <!-- Minimalne style -->
+  <title>Generator Godzin Rmsped - Word-like Table</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Bootstrap 5 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
   <style>
     body {
-      font-family: Arial, sans-serif;
-      max-width: 700px;
-      margin: 30px auto;
-      background: #f5f5f5;
-      padding: 20px;
+      background-color: #f9f9f9;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
     }
-    #content {
+    .container {
+      margin-top: 30px;
+      margin-bottom: 30px;
+      max-width: 1000px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .header p {
+      font-size: 16px;
+      color: #555;
+    }
+    .card {
       background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       padding: 20px;
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
+      margin-bottom: 30px;
     }
-    button {
-      padding: 10px 15px;
-      margin-right: 10px;
-      cursor: pointer;
+    .card h5 {
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+    .instructions ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .instructions ul li {
+      margin-bottom: 8px;
+      position: relative;
+      padding-left: 25px;
+    }
+    .instructions ul li::before {
+      content: "\f058";
+      font-family: "Font Awesome 5 Free";
+      font-weight: 900;
+      color: #0066cc;
+      position: absolute;
+      left: 0;
+      top: -1px;
+    }
+    .form-group.required .form-label:after {
+      content: "*";
+      color: red;
+      margin-left: 5px;
+    }
+    .form-text {
+      font-size: 12px;
+      color: #666;
+    }
+    .holidays-list li {
+      margin-bottom: 5px;
+    }
+    .btn {
+      transition: background-color 0.3s ease;
+    }
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      color: #777;
+      font-size: 0.85em;
+    }
+    /* Stylizacja tabeli */
+    .final-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+    .final-table th,
+    .final-table td {
+      border: 1px solid #000;
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .final-table thead th {
+      background-color: #e0e0e0;
+      font-weight: bold;
+    }
+    /* Wyróżnienie dni niepracujących */
+    .final-table .holiday td {
+      background-color: #ffcccc;
+      color: #a00;
+      font-weight: bold;
+    }
+    /* Styl wniosku urlopowego */
+    #vacationRequest {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+      padding: 20px;
+      border: 1px solid #000;
+      margin-top: 20px;
+    }
+    /* Dodajmy styl dla "podpisu" (imię i nazwisko) */
+    .signatureName {
+      font-family: "Arial", sans-serif;
+      font-size: 24px;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .signatureLine {
+      margin: 0 auto;
+      width: 200px;
+      border: none;
+      border-top: 1px solid #000;
+      margin-top: 5px;
     }
   </style>
-
-  <!-- Biblioteki do generowania PDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <h2>Test Generowania i Wysyłania PDF</h2>
+  <div class="container">
+    <!-- Nagłówek -->
+    <div class="header">
+      <h1><i class="fas fa-clock"></i> Generator Godzin Rmsped</h1>
+      <p>Wprowadź dane i wybierz rodzaj umowy.</p>
+    </div>
 
-  <div id="content">
-    <p>Treść dokumentu PDF (dowolna) – sprawdzamy, czy generowanie działa.</p>
-    <p>Możesz tu wstawić tekst lub prostą tabelę itd.</p>
+    <!-- Instrukcja -->
+    <div class="card mb-4">
+      <h5><i class="fas fa-info-circle"></i> Instrukcja</h5>
+      <div class="instructions">
+        <ul>
+          <li>Wybierz rodzaj umowy:
+            <ul>
+              <li><strong>Umowa zlecenie</strong> – godziny generowane losowo, <em>opcja "Losowe dni wolne" jest obowiązkowa</em>.</li>
+              <li><strong>Umowa o pracę (pełny etat)</strong> – stałe godziny: 8:00–16:00.</li>
+              <li><strong>Umowa o pracę (3/4 etatu)</strong> – stałe godziny: 8:00–14:00.</li>
+            </ul>
+          </li>
+          <li>Dla umowy zlecenie wpisz łączną liczbę godzin – dla umów o pracę to pole jest ukryte.</li>
+          <li>Wybierz miesiąc i rok oraz (opcjonalnie) dodaj ręcznie dni wolne.</li>
+          <li>Opcja „Dodaj losowo dni wolne”:
+            <ul>
+              <li><em>Obowiązkowa</em> przy umowie zleceniu (zaznaczona na stałe).</li>
+              <li><em>Dobrowolna</em> przy umowie o pracę (pełny etat) i 3/4 etatu.</li>
+            </ul>
+          </li>
+          <li>Dla umowy o pracę (3/4 etatu) zaznacz opcję „Wygeneruj wniosek urlopowy”, aby w PDF-ie na osobnej stronie pojawił się wniosek urlopowy (dni wolne będą prezentowane jako zakresy, np. 04.05.2025 – 06.05.2025).</li>
+          <li>Kliknij „Generuj tabelę” i pobierz PDF (PDF będzie miał dwie strony – harmonogram oraz, jeśli dotyczy, wniosek urlopowy).</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Formularz -->
+    <div class="card mb-4">
+      <form id="generatorForm" novalidate>
+        <!-- Wybór rodzaju umowy -->
+        <div class="mb-3">
+          <label class="form-label">Rodzaj umowy</label>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="contractType" id="contractZlecenie" value="zlecenie" checked>
+            <label class="form-check-label" for="contractZlecenie">Umowa zlecenie</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="contractType" id="contractPraca" value="praca">
+            <label class="form-check-label" for="contractPraca">Umowa o pracę (pełny etat)</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="contractType" id="contract34" value="praca3/4">
+            <label class="form-check-label" for="contract34">Umowa o pracę (3/4 etatu)</label>
+          </div>
+        </div>
+
+        <!-- Checkbox dla wniosku urlopowego – widoczny tylko przy umowie 3/4 etatu -->
+        <div class="mb-3 form-check" id="vacationRequestGroup" style="display:none;">
+          <input type="checkbox" class="form-check-input" id="generateVacation">
+          <label class="form-check-label" for="generateVacation">Wygeneruj wniosek urlopowy</label>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3 form-group required">
+            <label for="name" class="form-label">Imię i nazwisko</label>
+            <input type="text" class="form-control" id="name" required>
+            <div class="invalid-feedback">Wpisz imię i nazwisko.</div>
+          </div>
+          <!-- Pole "Łączna liczba godzin" – widoczne tylko przy umowie zlecenie -->
+          <div class="col-md-6 mb-3 form-group required" id="hoursGroup">
+            <label for="hours" class="form-label">Łączna liczba godzin</label>
+            <input type="number" class="form-control" id="hours" min="1" required>
+            <div class="invalid-feedback">Wpisz liczbę godzin (min 1).</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-4 mb-3 form-group required">
+            <label for="month" class="form-label">Miesiąc</label>
+            <select id="month" class="form-select" required>
+              <option value="">Wybierz...</option>
+              <option value="1">Styczeń</option>
+              <option value="2">Luty</option>
+              <option value="3">Marzec</option>
+              <option value="4">Kwiecień</option>
+              <option value="5">Maj</option>
+              <option value="6">Czerwiec</option>
+              <option value="7">Lipiec</option>
+              <option value="8">Sierpień</option>
+              <option value="9">Wrzesień</option>
+              <option value="10">Październik</option>
+              <option value="11">Listopad</option>
+              <option value="12">Grudzień</option>
+            </select>
+            <div class="invalid-feedback">Wybierz miesiąc.</div>
+          </div>
+          <div class="col-md-4 mb-3 form-group required">
+            <label for="year" class="form-label">Rok</label>
+            <input type="number" class="form-control" id="year" min="1900" value="2025" required>
+            <div class="invalid-feedback">Podaj rok (np. 2025).</div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <small class="form-text">Praca kończy się zawsze przed 20:00.</small>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Dodatkowe dni wolne</label>
+          <div class="input-group">
+            <input type="date" class="form-control" id="holidayPicker">
+            <button type="button" class="btn btn-secondary" id="addHoliday">Dodaj wolne</button>
+          </div>
+          <ul class="holidays-list" id="holidaysList"></ul>
+        </div>
+        
+        <!-- Opcja "losowe dni wolne" – zawsze widoczna, ale wymuszone 'checked' przy zleceniu -->
+        <div class="mb-3 form-check" id="randomHolidaysGroup">
+          <input type="checkbox" class="form-check-input" id="randomHolidays">
+          <label class="form-check-label" for="randomHolidays">Dodaj losowo dni wolne</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Generuj tabelę</button>
+      </form>
+    </div>
+
+    <!-- Wyświetlenie harmonogramu -->
+    <div id="output" class="table-responsive"></div>
+    <!-- Wniosek urlopowy – ukryty, a jego zawartość zostanie wykorzystana do PDF (druga strona) -->
+    <div id="vacationRequest" style="display:none;"></div>
+    <div id="exportButtons" class="mt-3" style="display:none;">
+      <button id="generatePDF" class="btn btn-success me-2"><i class="far fa-file-pdf"></i> Pobierz jako PDF</button>
+      <!-- Nowy przycisk: Wyślij Tabelę e-mailem -->
+      <button id="sendPDF" class="btn btn-primary"><i class="far fa-envelope"></i> Wyślij Tabelę e-mailem</button>
+    </div>
   </div>
 
-  <button id="generatePDFBtn">Generuj PDF (lokalnie)</button>
-  <button id="sendPDFBtn">Wyślij PDF do /send-pdf</button>
+  <footer>&copy; 2023 Emerlog</footer>
+
+  <!-- Biblioteki JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
-    // ==============================================
-    // 1. Generowanie PDF w przeglądarce (lokalnie)
-    // ==============================================
-    document.getElementById("generatePDFBtn").addEventListener("click", async () => {
+    /* 
+      Twój dotychczasowy kod do generowania tabeli + PDF 
+      (funkcje, obsługa form, generateTable(), downloadPDF(), itp.)
+      Uzupełniony o 'sendPDF()' – wysyłanie do /send-pdf 
+    */
+
+    // (kod z Rmsped Generator, przycięty, wklej tutaj to co jest powyżej)
+
+    // ... WSTAWIAMY DOKŁADNIE WSZYSTKO Z GÓRY ...
+    // 1) Stałe, 2) Funkcja generateTable(), 3) downloadPDF(), itd.
+
+    // Funkcja, która generuje PDF w pamięci i wysyła do /send-pdf
+    async function sendPDF() {
+      console.log("sendPDF triggered");
       try {
-        const { jsPDF } = window.jspdf; // z biblioteki
-        const pdf = new jsPDF("p", "pt", "a4");
-        const contentEl = document.getElementById("content");
-
-        // html2canvas => screenshot elementu
-        const canvas = await html2canvas(contentEl, { scale: 2 });
-        const imgData = canvas.toDataURL("image/png");
-
-        // Wstawiamy obraz do PDF (cała strona)
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-
-        // Obliczamy skalę, by zmieścić w a4
-        const ratio = Math.min(
-          pageWidth / canvas.width,
-          pageHeight / canvas.height
-        );
-        const finalWidth = canvas.width * ratio;
-        const finalHeight = canvas.height * ratio;
-
-        // Pozycja (centrujemy w poziomie)
-        const xPos = (pageWidth - finalWidth) / 2;
-        const yPos = 20;
-
-        pdf.addImage(imgData, "PNG", xPos, yPos, finalWidth, finalHeight);
-        pdf.save("test.pdf");
-        alert("PDF wygenerowany lokalnie!");
-      } catch (err) {
-        console.error("Błąd generowania PDF", err);
-        alert("Błąd generowania PDF. Sprawdź konsolę.");
-      }
-    });
-
-    // ==============================================
-    // 2. Wysyłanie PDF (base64) do /send-pdf
-    // ==============================================
-    document.getElementById("sendPDFBtn").addEventListener("click", async () => {
-      try {
-        // Znowu generujemy PDF w pamięci, ale tym razem nie zapisujemy, tylko fetch => /send-pdf
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF("p", "pt", "a4");
-        const contentEl = document.getElementById("content");
-
-        const canvas = await html2canvas(contentEl, { scale: 2 });
-        const imgData = canvas.toDataURL("image/png");
-
+        const pdf = new jsPDF("portrait", "pt", "a4");
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
-        const ratio = Math.min(
-          pageWidth / canvas.width,
-          pageHeight / canvas.height
-        );
-        const finalWidth = canvas.width * ratio;
-        const finalHeight = canvas.height * ratio;
+        const margin = 20;
 
-        const xPos = (pageWidth - finalWidth) / 2;
-        const yPos = 20;
-        pdf.addImage(imgData, "PNG", xPos, yPos, finalWidth, finalHeight);
+        const logoImageURL = "https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
+        const logoImg = new Image();
+        logoImg.crossOrigin = "Anonymous";
+        logoImg.src = logoImageURL;
+        await new Promise(resolve => { logoImg.onload = resolve; });
 
-        // Otrzymujemy base64 z biblioteki jsPDF:
-        const pdfBase64 = pdf.output("datauristring").split(",")[1]; 
-        // => "JVBERi0xLjU..." 
+        const desiredLogoWidth = 150;
+        let desiredLogoHeight = logoImg.height * (desiredLogoWidth / logoImg.width);
+        if (!desiredLogoHeight || desiredLogoHeight <= 0 || Number.isNaN(desiredLogoHeight)) {
+          desiredLogoHeight = 50; 
+        }
 
-        // Wysyłamy do /send-pdf
-        // Zakładamy, że serwer jest skonfigurowany do maila
-        // w formacie { name, pdfData }
-        const name = "TestPDF"; // Możesz zmienić np. na user input
+        const posX_logo = margin;
+        const posY_logo = margin;
+        
+        // Strona 1 – logo
+        pdf.addImage(logoImg, "PNG", posX_logo, posY_logo, desiredLogoWidth, desiredLogoHeight);
+
+        const gap = 0;
+        const availableHeight = pageHeight - (margin + desiredLogoHeight + gap + margin);
+        const availableWidth = pageWidth - 2 * margin;
+
+        const outputEl = document.getElementById("output");
+        if (!outputEl) {
+          alert("Brak elementu #output do wygenerowania PDF.");
+          return;
+        }
+
+        // Zrzut tabeli (pierwsza strona)
+        const canvas = await html2canvas(outputEl, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false
+        });
+        const tableImgData = canvas.toDataURL("image/png");
+
+        const ratio = Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
+        let finalW = canvas.width * ratio;
+        let finalH = canvas.height * ratio;
+
+        if (!finalW || finalW <= 0 || Number.isNaN(finalW)) {
+          finalW = canvas.width; 
+        }
+        if (!finalH || finalH <= 0 || Number.isNaN(finalH)) {
+          finalH = canvas.height; 
+        }
+
+        let posX_table = (pageWidth - finalW) / 2;
+        let posY_table = margin + desiredLogoHeight + gap + (availableHeight - finalH) / 2;
+        posX_table = Math.max(posX_table, margin);
+        posY_table = Math.max(posY_table, margin + desiredLogoHeight + gap);
+
+        pdf.addImage(tableImgData, "PNG", posX_table, posY_table, finalW, finalH);
+
+        // Druga strona (wniosek), jeśli dotyczy
+        const extraVacationEl = document.getElementById("vacationRequest");
+        let extraVacationBackup = "";
+        if (extraVacationEl) {
+          extraVacationBackup = extraVacationEl.style.display;
+          extraVacationEl.style.display = "block";
+        }
+
+        if (extraVacationEl && extraVacationEl.innerHTML.trim() !== "") {
+          pdf.addPage();
+          const canvasVacation = await html2canvas(extraVacationEl, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false
+          });
+          const vacImgData = canvasVacation.toDataURL("image/png");
+
+          const availableHeightVac = pageHeight - 2 * margin;
+          const availableWidthVac = pageWidth - 2 * margin;
+          const ratioVac = Math.min(availableWidthVac / canvasVacation.width, availableHeightVac / canvasVacation.height);
+
+          let finalWVac = canvasVacation.width * ratioVac;
+          let finalHVac = canvasVacation.height * ratioVac;
+
+          if (!finalWVac || finalWVac <= 0 || Number.isNaN(finalWVac)) {
+            finalWVac = canvasVacation.width;
+          }
+          if (!finalHVac || finalHVac <= 0 || Number.isNaN(finalHVac)) {
+            finalHVac = canvasVacation.height;
+          }
+
+          let posXVac = (pageWidth - finalWVac) / 2;
+          let posYVac = margin + (availableHeightVac - finalHVac) / 2;
+          posXVac = Math.max(posXVac, margin);
+          posYVac = Math.max(posYVac, margin);
+
+          pdf.addImage(vacImgData, "PNG", posXVac, posYVac, finalWVac, finalHVac);
+        }
+
+        // Przywracamy display oryginalne
+        if (extraVacationEl) {
+          extraVacationEl.style.display = extraVacationBackup;
+        }
+
+        // Zamiast pdf.save(), wysyłamy do /send-pdf
+        const pdfBase64 = pdf.output("datauristring").split(",")[1];
+        const nameValue = document.getElementById("name").value.trim() || "Niepodano";
+
+        // fetch do /send-pdf
         const res = await fetch("/send-pdf", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, pdfData: pdfBase64 })
+          body: JSON.stringify({
+            name: nameValue,
+            pdfData: pdfBase64
+          })
         });
 
         if (res.ok) {
-          alert("PDF wysłany do /send-pdf!");
+          alert("Wysłano tabelę e-mailem!");
         } else {
           alert("Błąd wysyłki PDF. Status: " + res.status);
         }
+
       } catch (err) {
-        console.error("Błąd wysyłki PDF", err);
+        console.error("Błąd wysyłania PDF mailem:", err);
         alert("Błąd wysyłki PDF. Sprawdź konsolę.");
       }
-    });
+    }
+
+    // Po wygenerowaniu tabeli w generateTable(), pamiętaj by ustawić:
+    // document.getElementById("sendPDF").onclick = sendPDF;
+    // (To jest już w "exportButtons" w generateTable() -> see below.)
+    function generateTable() {
+      // ... Twój oryginalny kod generujący tabelę ...
+      // ... (JUŻ JEST W POWYŻSZYM KODZIE)...
+
+      // Po zrobieniu:
+      document.getElementById("exportButtons").style.display = "block";
+      document.getElementById("generatePDF").onclick = downloadPDF;
+      document.getElementById("sendPDF").onclick = sendPDF;
+    }
   </script>
 </body>
 </html>
