@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Test docx minimal - wysyłanie Worda</title>
+  <!-- JEDYNY link do docx -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.umd.js"></script>
+</head>
+<body style="font-family: Arial; max-width: 600px; margin: 20px auto;">
+  <h2>Test wysyłania Worda</h2>
+
+  <button id="sendWordBtn" style="padding:10px 20px;">Wyślij Word testowy</button>
+
+  <script>
+    document.getElementById("sendWordBtn").addEventListener("click", async () => {
+      // 1) Sprawdź, czy docx jest widoczne:
+      if (!window.docx || !window.docx.Document) {
+        alert("window.docx jest undefined! Link do docx nie wczytany!");
+        return;
+      }
+
+      // 2) Minimalny Word:
+      const { Document, Paragraph, Packer } = window.docx;
+      const doc = new Document();
+      doc.addSection({
+        children: [
+          new Paragraph("Testowy plik Word."),
+          new Paragraph("Drugi akapit."),
+        ]
+      });
+
+      const blob = await Packer.toBlob(doc);
+
+      // 3) Base64:
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result.split(",")[1];
+        console.log("Wysyłam do /send-docx base64 len =", base64?.length);
+        try {
+          const res = await fetch("/send-docx", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: "TestDocx",
+              docxData: base64
+            })
+          });
+          if (res.ok) {
+            alert("Wysłano Word testowy!");
+          } else {
+            alert("Błąd wysyłki Worda (status: " + res.status + ")");
+          }
+        } catch (err) {
+          console.error("Błąd fetch /send-docx", err);
+          alert("Błąd fetch /send-docx. Sprawdź konsolę.");
+        }
+      };
+      reader.readAsDataURL(blob);
+    });
+  </script>
+</body>
+</html>
