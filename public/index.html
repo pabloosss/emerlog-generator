@@ -2,76 +2,131 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Test docx minimal - wysyłanie Worda</title>
+  <title>Test Generowania i Wysyłania PDF</title>
+  <!-- Minimalne style -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 30px auto;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    #content {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px 15px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+  </style>
 
-  <!-- docx z JSDelivr, jedyny link -->
-  <script src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.umd.js"></script>
+  <!-- Biblioteki do generowania PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body style="font-family: Arial; max-width: 600px; margin: 20px auto;">
-  <h2>Test wysyłania Worda</h2>
+<body>
+  <h2>Test Generowania i Wysyłania PDF</h2>
 
-  <button id="sendWordBtn" style="padding:10px 20px;">Wyślij Word testowy</button>
+  <div id="content">
+    <p>Treść dokumentu PDF (dowolna) – sprawdzamy, czy generowanie działa.</p>
+    <p>Możesz tu wstawić tekst lub prostą tabelę itd.</p>
+  </div>
+
+  <button id="generatePDFBtn">Generuj PDF (lokalnie)</button>
+  <button id="sendPDFBtn">Wyślij PDF do /send-pdf</button>
 
   <script>
-    document.getElementById("sendWordBtn").addEventListener("click", async () => {
+    // ==============================================
+    // 1. Generowanie PDF w przeglądarce (lokalnie)
+    // ==============================================
+    document.getElementById("generatePDFBtn").addEventListener("click", async () => {
       try {
-        // Sprawdź, czy docx jest załadowany
-        if (!window.docx || !window.docx.Document) {
-          alert("window.docx jest undefined! Sprawdź link do docx");
-          return;
-        }
+        const { jsPDF } = window.jspdf; // z biblioteki
+        const pdf = new jsPDF("p", "pt", "a4");
+        const contentEl = document.getElementById("content");
 
-        // Rozpakowujemy docx obiekty
-        const { Document, Paragraph, Packer } = window.docx;
+        // html2canvas => screenshot elementu
+        const canvas = await html2canvas(contentEl, { scale: 2 });
+        const imgData = canvas.toDataURL("image/png");
 
-        // Tworzymy prosty Document:
-        const doc = new Document({
-          creator: "Test DOCX",
-          title: "Plik testowy"
-        });
+        // Wstawiamy obraz do PDF (cała strona)
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
 
-        // Dodajemy jeden prosty paragraf:
-        doc.addSection({
-          children: [
-            new Paragraph("To jest testowy plik Word."),
-            new Paragraph("Drugi akapit."),
-          ]
-        });
+        // Obliczamy skalę, by zmieścić w a4
+        const ratio = Math.min(
+          pageWidth / canvas.width,
+          pageHeight / canvas.height
+        );
+        const finalWidth = canvas.width * ratio;
+        const finalHeight = canvas.height * ratio;
 
-        // Tworzymy blob
-        const blob = await Packer.toBlob(doc);
+        // Pozycja (centrujemy w poziomie)
+        const xPos = (pageWidth - finalWidth) / 2;
+        const yPos = 20;
 
-        // Konwertujemy na base64
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = reader.result.split(",")[1];
-
-          // Wysyłamy do /send-docx
-          try {
-            const res = await fetch("/send-docx", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ 
-                name: "TestDocx", 
-                docxData: base64 
-              })
-            });
-
-            if (res.ok) {
-              alert("Wysłano Word testowy!");
-            } else {
-              alert("Błąd wysyłki Worda (status: " + res.status + ")");
-            }
-          } catch (err) {
-            console.error("Błąd fetch /send-docx", err);
-            alert("Błąd fetch /send-docx. Sprawdź konsolę.");
-          }
-        };
-        reader.readAsDataURL(blob);
-
+        pdf.addImage(imgData, "PNG", xPos, yPos, finalWidth, finalHeight);
+        pdf.save("test.pdf");
+        alert("PDF wygenerowany lokalnie!");
       } catch (err) {
-        console.error("Błąd w sendWord", err);
-        alert("Błąd w sendWord: " + err);
+        console.error("Błąd generowania PDF", err);
+        alert("Błąd generowania PDF. Sprawdź konsolę.");
+      }
+    });
+
+    // ==============================================
+    // 2. Wysyłanie PDF (base64) do /send-pdf
+    // ==============================================
+    document.getElementById("sendPDFBtn").addEventListener("click", async () => {
+      try {
+        // Znowu generujemy PDF w pamięci, ale tym razem nie zapisujemy, tylko fetch => /send-pdf
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF("p", "pt", "a4");
+        const contentEl = document.getElementById("content");
+
+        const canvas = await html2canvas(contentEl, { scale: 2 });
+        const imgData = canvas.toDataURL("image/png");
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const ratio = Math.min(
+          pageWidth / canvas.width,
+          pageHeight / canvas.height
+        );
+        const finalWidth = canvas.width * ratio;
+        const finalHeight = canvas.height * ratio;
+
+        const xPos = (pageWidth - finalWidth) / 2;
+        const yPos = 20;
+        pdf.addImage(imgData, "PNG", xPos, yPos, finalWidth, finalHeight);
+
+        // Otrzymujemy base64 z biblioteki jsPDF:
+        const pdfBase64 = pdf.output("datauristring").split(",")[1]; 
+        // => "JVBERi0xLjU..." 
+
+        // Wysyłamy do /send-pdf
+        // Zakładamy, że serwer jest skonfigurowany do maila
+        // w formacie { name, pdfData }
+        const name = "TestPDF"; // Możesz zmienić np. na user input
+        const res = await fetch("/send-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, pdfData: pdfBase64 })
+        });
+
+        if (res.ok) {
+          alert("PDF wysłany do /send-pdf!");
+        } else {
+          alert("Błąd wysyłki PDF. Status: " + res.status);
+        }
+      } catch (err) {
+        console.error("Błąd wysyłki PDF", err);
+        alert("Błąd wysyłki PDF. Sprawdź konsolę.");
       }
     });
   </script>
