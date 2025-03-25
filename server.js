@@ -19,20 +19,21 @@ app.get("/test", (req, res) => {
   res.json({ message: "Serwer działa poprawnie!" });
 });
 
-// Endpoint do przyjmowania DOCX i wysyłania mailem
+// Endpoint: wysyłanie DOCX
 app.post("/send-docx", async (req, res) => {
   try {
     const { name, docxData } = req.body;
+    if (!name || !docxData) return res.status(400).json({ error: "Brak danych" });
 
-    let transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: process.env.EMAIL_PASS,
       },
     });
 
-    let mailOptions = {
+    const mailOptions = {
       from: process.env.EMAIL_USER,
       to: "pawel.ruchlicki@emerlog.eu",
       subject: `Rozliczenie godzin (DOCX) - ${name}`,
@@ -41,35 +42,36 @@ app.post("/send-docx", async (req, res) => {
         {
           filename: "harmonogram.docx",
           content: Buffer.from(docxData, "base64"),
-          contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        }
-      ]
+          contentType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        },
+      ],
     };
 
     await transporter.sendMail(mailOptions);
-    console.log("Word wysłany!");
-    return res.json({ message: "DOCX wysłany OK" });
-  } catch (error) {
-    console.error("Błąd wysyłki DOCX", error);
-    return res.status(500).json({ error: "Błąd wysyłki DOCX" });
+    console.log("📤 Word wysłany!");
+    res.json({ message: "DOCX wysłany OK" });
+  } catch (err) {
+    console.error("❌ Błąd wysyłki DOCX:", err);
+    res.status(500).json({ error: "Błąd wysyłki DOCX" });
   }
 });
 
-// NOWY Endpoint do przyjmowania PDF i wysyłania mailem
+// Endpoint: wysyłanie PDF
 app.post("/send-pdf", async (req, res) => {
   try {
-    const { name, pdfData } = req.body; 
-    // Klient musi wysłać body: { name, pdfData: "base64..." }
+    const { name, pdfData } = req.body;
+    if (!name || !pdfData) return res.status(400).json({ error: "Brak danych" });
 
-    let transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: process.env.EMAIL_PASS,
       },
     });
 
-    let mailOptions = {
+    const mailOptions = {
       from: process.env.EMAIL_USER,
       to: "pawel.ruchlicki@emerlog.eu",
       subject: `Rozliczenie godzin (PDF) - ${name}`,
@@ -78,21 +80,21 @@ app.post("/send-pdf", async (req, res) => {
         {
           filename: "harmonogram.pdf",
           content: Buffer.from(pdfData, "base64"),
-          contentType: "application/pdf"
-        }
-      ]
+          contentType: "application/pdf",
+        },
+      ],
     };
 
     await transporter.sendMail(mailOptions);
-    console.log("PDF wysłany!");
-    return res.json({ message: "PDF wysłany OK" });
-  } catch (error) {
-    console.error("Błąd wysyłki PDF", error);
-    return res.status(500).json({ error: "Błąd wysyłki PDF" });
+    console.log("📤 PDF wysłany!");
+    res.json({ message: "PDF wysłany OK" });
+  } catch (err) {
+    console.error("❌ Błąd wysyłki PDF:", err);
+    res.status(500).json({ error: "Błąd wysyłki PDF" });
   }
 });
 
-// Start serwera
+// Start
 app.listen(PORT, () => {
-  console.log(`Serwer działa na porcie ${PORT}`);
+  console.log(`🚀 Serwer działa na porcie ${PORT}`);
 });
