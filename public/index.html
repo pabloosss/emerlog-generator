@@ -40,10 +40,6 @@
       padding: 20px;
       margin-bottom: 30px;
     }
-    .card h5 {
-      margin-bottom: 15px;
-      font-weight: 600;
-    }
     /* Układ ogólny */
     .form-group.required .form-label:after {
       content: "*";
@@ -232,25 +228,24 @@
 (function(){
   "use strict";
 
-  // ... (Ten sam kod co wcześniej) ...
-  // Usunięto kartę instrukcji z HTML i zmieniono h1 / <title> na "Generator Godzin Emerlog"
-  // Dodano #sendingSpinner, który pokazujemy / chowamy przy wysyłce e-maila
-
-  console.log("Kod IIFE startuje - bez instrukcji, nazwa: Generator Godzin Emerlog.");
+  console.log("Kod IIFE startuje - nazwa: Generator Godzin Emerlog.");
 
   var MAX_HOURS_PER_DAY = 12;
   var MIN_HOURS_PER_DAY = 4;
 
+  // Stałe świąt
   var fixedHolidays = [
     "01-01","06-01","20-04","21-04","01-05","03-05","08-06","19-06",
     "15-08","01-11","11-11","25-12","26-12"
   ];
 
+  // Nazwy miesięcy
   var monthNames = [
     "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
     "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
   ];
 
+  // Globalne tablice
   window.customHolidays = window.customHolidays || [];
   window.randomFreeDaysAdded = window.randomFreeDaysAdded || [];
 
@@ -289,10 +284,10 @@
     document.getElementById("month").addEventListener("change", updateHolidayPickerRange);
     document.getElementById("year").addEventListener("change", updateHolidayPickerRange);
 
-    // Spinner schowany, pojawi się w sendPDFEmail
     document.getElementById("sendingSpinner").style.display = "none";
   });
 
+  // Przełączanie widoczności / wymagalności w zależności od umowy
   function onContractChange(){
     var type = document.querySelector('input[name="contractType"]:checked').value;
     var randomH = document.getElementById("randomHolidays");
@@ -350,6 +345,7 @@
     });
   }
 
+  // Ogranicz datePicker do wybranego miesiaca i roku
   function updateHolidayPickerRange(){
     var mVal=parseInt(document.getElementById("month").value,10);
     var yVal=parseInt(document.getElementById("year").value,10);
@@ -371,10 +367,6 @@
     }
   }
 
-  var fixedHolidays = [
-    "01-01","06-01","20-04","21-04","01-05","03-05","08-06","19-06",
-    "15-08","01-11","11-11","25-12","26-12"
-  ];
   function checkCustomHoliday(day,month,year){
     var dd=String(day).padStart(2,'0');
     var mm=String(month).padStart(2,'0');
@@ -391,105 +383,57 @@
     var dw=dObj.getDay();
     return (dw===0||dw===6);
   }
-  function shuffleArray(ar){
-    for(var i=ar.length-1;i>0;i--){
-      var j=Math.floor(Math.random()*(i+1));
-      var temp=ar[i];
-      ar[i]=ar[j];
-      ar[j]=temp;
-    }
-  }
-  var monthNames = [
-    "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
-    "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
-  ];
 
+  // Nowa implementacja rozdzielania godzin (4 - 12h)
   function distributeHours(totalHours, daysCount) {
-  // Stałe minimalne i maksymalne godziny dziennie
-  const MIN_DAY = 4;  // minimalnie 4h
-  const MAX_DAY = 12; // maksymalnie 12h
+    const MIN_DAY = 4;
+    const MAX_DAY = 12;
 
-  // Sprawdzamy, czy w ogóle da się pomieścić te godziny
-  if (daysCount === 0) return null;
-  const minPossible = MIN_DAY * daysCount;
-  const maxPossible = MAX_DAY * daysCount;
+    if (daysCount === 0) return null;
+    const minPossible = MIN_DAY * daysCount;
+    const maxPossible = MAX_DAY * daysCount;
 
-  if (totalHours < minPossible) {
-    alert(`Za mało godzin (min. ${minPossible}).`);
-    return null;
-  }
-  if (totalHours > maxPossible) {
-    alert(`Za dużo godzin (max. ${maxPossible}).`);
-    return null;
-  }
-
-  // Krok 1. Startujemy z tablicą, gdzie każdy dzień ma 4h
-  let arr = new Array(daysCount).fill(MIN_DAY);
-
-  // Ile godzin nam zostało do rozdania ponad te 4h na dzień?
-  let leftover = totalHours - (daysCount * MIN_DAY);
-
-  // Krok 2. Losowo dokładamy pozostałe godziny
-  while (leftover > 0) {
-    // Losowy index dnia
-    let i = Math.floor(Math.random() * daysCount);
-
-    // Jeśli ten dzień ma < 12 godzin, to go incrementujemy
-    if (arr[i] < MAX_DAY) {
-      arr[i]++;
-      leftover--;
-    }
-    // jeśli już 12h, to wylosujemy inny dzień - 
-    // pętla while leftover>0 będzie dalej próbować.
-    // Tylko musimy uważać, by nie utkwić w pętli, 
-    // kiedy wszystkie dni osiągnęły 12h - ale to wykryjemy niżej.
-    
-    // Sprawdzamy, czy nie da się już nic dodać (wszystkie dni =12?)
-    // i leftover > 0 => błąd.
-    let allFull = arr.every(day => day === MAX_DAY);
-    if (allFull && leftover > 0) {
-      alert("Nie można rozdzielić godzin - wszystkie dni osiągnęły 12h.");
+    if (totalHours < minPossible) {
+      alert(`Za mało godzin (min. ${minPossible}).`);
       return null;
     }
-  }
-
-  // Tablica arr losowo rozdzielona
-  // Sprawdzamy sumę kontrolnie
-  let sumCheck = arr.reduce((a, b) => a + b, 0);
-  if (sumCheck !== totalHours) {
-    alert("Błąd: sumy się nie zgadzają. Spróbuj mniej godzin.");
-    return null;
-  }
-
-  return arr;
-}
+    if (totalHours > maxPossible) {
+      alert(`Za dużo godzin (max. ${maxPossible}).`);
+      return null;
     }
-    var diff=totalHours-arr.reduce(function(a,b){return a+b;},0);
-    if(diff!==0){
-      for(var w=0; w<daysCount && diff!==0; w++){
-        if(diff>0 && arr[w]<MAX_HOURS_PER_DAY){
-          var canAdd=Math.min(diff,MAX_HOURS_PER_DAY-arr[w]);
-          arr[w]+=canAdd; diff-=canAdd;
-        }else if(diff<0 && arr[w]>MIN_HOURS_PER_DAY){
-          var canRem=Math.min(Math.abs(diff),arr[w]-MIN_HOURS_PER_DAY);
-          arr[w]-=canRem; diff+=canRem;
-        }
+
+    // Start z 4h/dzień
+    let arr = new Array(daysCount).fill(MIN_DAY);
+    let leftover = totalHours - (daysCount * MIN_DAY);
+
+    while (leftover > 0) {
+      let i = Math.floor(Math.random() * daysCount);
+      if (arr[i] < MAX_DAY) {
+        arr[i]++;
+        leftover--;
+      }
+      let allFull = arr.every(function(day){ return day === MAX_DAY; });
+      if (allFull && leftover > 0) {
+        alert("Nie można rozdzielić godzin - wszystkie dni osiągnęły 12h.");
+        return null;
       }
     }
-    var finalSum=arr.reduce(function(a,b){return a+b;},0);
-    if(finalSum!==totalHours){
-      alert("Nie udało się dopasować godzin do wskazanej sumy.");
+
+    let sumCheck = arr.reduce(function(a, b){ return a + b; }, 0);
+    if (sumCheck !== totalHours) {
+      alert("Błąd: sumy się nie zgadzają. Spróbuj mniej godzin.");
       return null;
     }
     return arr;
   }
+
   function getRandomInt(mi,ma){
     mi=Math.ceil(mi);
     ma=Math.floor(ma);
     return (ma<mi)?mi:Math.floor(Math.random()*(ma-mi+1))+mi;
   }
 
-  function generateTable(){
+  async function generateTable(){
     var fullName=document.getElementById("name").value.trim();
     var monthVal=parseInt(document.getElementById("month").value,10);
     var yearVal=parseInt(document.getElementById("year").value,10);
@@ -515,7 +459,8 @@
       } else if(fixHol){
         holType="Święto";
       }
-      var isWork=(!weekend&&!fixHol&&!cHol);
+
+      var isWork=(!weekend && !fixHol && !cHol);
       dayData.push({
         day:d,
         date:dateObj,
@@ -527,6 +472,7 @@
       });
     }
 
+    // Losowe wolne: w razie zlecenie i checkbox
     if(contractType==="zlecenie" && addRandom){
       var pattern=[0,1,3,1,0,0];
       var grouped={};
@@ -540,10 +486,10 @@
         var need=pattern[parseInt(k)-1]||0;
         need=Math.min(need,arr.length);
         if(need>0){
-          arr.sort(function(){return 0.5-Math.random();});
+          arr.sort(function(){return 0.5 - Math.random();});
           arr.slice(0,need).forEach(function(dd){
             dd.isWorkingDay=false;
-            dd.holidayType="Losowy dzień wolny"; 
+            dd.holidayType="Losowy dzień wolny";
           });
         }
       });
@@ -554,24 +500,28 @@
 
     if(contractType==="praca"){
       workingDays.forEach(function(d){
-        d.hours=8; d.start="8:00"; d.end="16:00";
+        d.hours=8;
+        d.start="8:00";
+        d.end="16:00";
       });
       totalHours=workingDays.length*8;
     } else if(contractType==="praca3/4"){
       workingDays.forEach(function(d){
-        d.hours=6; d.start="8:00"; d.end="14:00";
+        d.hours=6;
+        d.start="8:00";
+        d.end="14:00";
       });
       totalHours=workingDays.length*6;
     } else if(contractType==="zlecenie"){
       totalHours=parseInt(document.getElementById("hours").value,10);
-      var hoursArr=distributeHours(totalHours,workingDays.length);
-      if(!hoursArr)return;
-      for(var i=0;i<workingDays.length;i++){
+      var hoursArr=distributeHours(totalHours, workingDays.length);
+      if(!hoursArr) return;
+      for(var i=0; i<workingDays.length; i++){
         var wd=workingDays[i];
         wd.hours=hoursArr[i];
-        var maxStart=20-hoursArr[i];
-        var sH=getRandomInt(6,maxStart);
-        var eH=sH+hoursArr[i];
+        var maxStart=20 - hoursArr[i];
+        var sH=getRandomInt(6, maxStart);
+        var eH=sH + hoursArr[i];
         if(eH>20){
           alert("Dzień "+wd.day+": koniec pracy po 20:00!");
           return;
@@ -588,11 +538,14 @@
 
     var nameParts=fullName.split(/\s+/);
     var lastName=nameParts.slice(1).join(" ");
+
+    // Render wierszy
     var rows=dayData.map(function(inf){
       var dd=String(inf.day).padStart(2,'0');
       var mm=String(monthVal).padStart(2,'0');
       var yyyy=yearVal;
       var wkd=inf.date.toLocaleString('pl-PL',{weekday:'short'});
+
       if(inf.isWorkingDay && inf.hours>0){
         return `<tr>
           <td>${inf.day}</td>
@@ -628,8 +581,6 @@
       </tr>
     `);
 
-    var monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
-      "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
     var tableHTML=`
       <h3 class="mt-4">${monthNames[monthVal-1]} ${yearVal}</h3>
       <h4>${fullName}</h4>
