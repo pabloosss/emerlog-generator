@@ -740,7 +740,7 @@
         return;
       }
 
-      const canvas = await html2canvas(outputEl,{ scale:2, useCORS:true, allowTaint:false });
+      const canvas = await html2canvas(outputEl,{ scale:0.7, useCORS:true, allowTaint:false });
       const tableImgData = canvas.toDataURL("image/png");
 
       const ratio = Math.min(availableWidth/canvas.width, availableHeight/canvas.height);
