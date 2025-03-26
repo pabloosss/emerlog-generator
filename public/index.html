@@ -296,7 +296,6 @@
   };
 
   // Tablice do przechowywania dni wolnych
-  // format: { date: 'YYYY-MM-DD', type: '...' }
   window.customHolidays = [];
   window.randomFreeDaysAdded = [];
 
@@ -441,8 +440,7 @@
     const mm = String(month).padStart(2,'0');
     const dd = String(day).padStart(2,'0');
     const fullDate = `${yyyy}-${mm}-${dd}`;
-    const found = window.customHolidays.find(obj => obj.date === fullDate);
-    return found || null;
+    return window.customHolidays.find(obj => obj.date === fullDate) || null;
   }
   function isFixedHoliday(day, month){
     const mm = String(month).padStart(2,'0');
@@ -464,11 +462,11 @@
     const maxPossible = MAX_HOURS_PER_DAY*daysCount;
     const minPossible = MIN_HOURS_PER_DAY*daysCount;
     if (totalHours>maxPossible){
-      alert(`Za dużo godzin (max ${maxPossible})!`);
+      alert(\`Za dużo godzin (max \${maxPossible})!\`);
       return null;
     }
     if (totalHours<minPossible){
-      alert(`Za mało godzin (min ${minPossible})!`);
+      alert(\`Za mało godzin (min \${minPossible})!\`);
       return null;
     }
     let arr = new Array(daysCount).fill(MIN_HOURS_PER_DAY);
@@ -518,7 +516,7 @@
     const d = String(date.getDate()).padStart(2,'0');
     const m = String(date.getMonth()+1).padStart(2,'0');
     const y = date.getFullYear();
-    return `${d}.${m}.${y}`;
+    return \`\${d}.\${m}.\${y}\`;
   }
 
   function generateTable() {
@@ -542,7 +540,7 @@
     let dayData = [];
     for (let d=1; d<=daysInMonth; d++){
       const dateObj = new Date(yearVal, monthVal-1, d);
-      const customHol = checkCustomHoliday(d, monthVal, yearVal); // { date, type } lub null
+      const customHol = checkCustomHoliday(d, monthVal, yearVal); 
       const isWeekendDay = isWeekend(dateObj);
       const isFixedHol = isFixedHoliday(d,monthVal);
 
@@ -615,7 +613,7 @@
         let sH = getRandomInt(6,maxStart);
         let eH = sH+h;
         if(eH>20){
-          alert(`Dzień ${wd.day}: koniec pracy po 20:00!`);
+          alert(\`Dzień \${wd.day}: koniec pracy po 20:00!\`);
           return;
         }
         wd.hours=h;
@@ -624,7 +622,7 @@
       }
       let finalSum = workingDays.reduce((acc,w)=>acc+w.hours,0);
       if (finalSum!==totalHours){
-        alert(`Finalna suma godzin to ${finalSum}, a zadano ${totalHours}. Spróbuj mniejszą liczbę godzin.`);
+        alert(\`Finalna suma godzin to \${finalSum}, a zadano \${totalHours}. Spróbuj mniejszą liczbę godzin.\`);
         return;
       }
     }
@@ -674,7 +672,6 @@
       </tr>
     `);
 
-    // Tabela (8 kolumn)
     let tableHTML = `
       <h3 class="mt-4">${monthNames[monthVal-1]} ${yearVal}</h3>
       <h4>${fullName}</h4>
@@ -707,6 +704,7 @@
     document.getElementById("generatePDF").onclick = downloadPDF;
   }
 
+  // ============== Tymczasowe zmniejszenie rozmiaru outputEl przed generowaniem PDF =================
   async function downloadPDF() {
     console.log("downloadPDF triggered");
     try {
@@ -716,6 +714,7 @@
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 20;
 
+      // Ładujemy logo
       const logoImageURL = "https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
       const logoImg = new Image();
       logoImg.crossOrigin = "Anonymous";
@@ -724,25 +723,49 @@
 
       const desiredLogoWidth = 150;
       let desiredLogoHeight = logoImg.height*(desiredLogoWidth/logoImg.width);
-      if (!desiredLogoHeight || desiredLogoHeight <=0 || Number.isNaN(desiredLogoHeight)){
+      if (!desiredLogoHeight || desiredLogoHeight<=0 || Number.isNaN(desiredLogoHeight)){
         desiredLogoHeight=50;
       }
+      // Umieszczamy logo w PDF
       const posX_logo = margin;
       const posY_logo = margin;
       pdf.addImage(logoImg,"PNG",posX_logo,posY_logo,desiredLogoWidth,desiredLogoHeight);
 
-      const gap=0;
-      const availableHeight = pageHeight - (margin+desiredLogoHeight+gap+margin);
-      const availableWidth = pageWidth - 2*margin;
       const outputEl = document.getElementById("output");
       if (!outputEl){
         alert("Brak elementu #output do wygenerowania PDF.");
         return;
       }
 
-      const canvas = await html2canvas(outputEl,{ scale:0.3, useCORS:true, allowTaint:false });
+      // Tymczasowo zmniejszamy wymiary outputEl
+      // (aby finalny zrzut był nieduży i w efekcie PDF ważył mniej)
+      const oldWidth = outputEl.style.width;
+      const oldHeight = outputEl.style.height;
+      const oldOverflow = outputEl.style.overflow;
+      outputEl.style.width = "600px";
+      outputEl.style.height = "800px";
+      outputEl.style.overflow = "hidden"; // reszta zawartości się nie wyrenderuje
+
+      // Generujemy zrzut
+      const canvas = await html2canvas(outputEl, {
+        scale: 1,
+        useCORS: true,
+        allowTaint: false
+      });
+
+      // Przywracamy oryginalne style
+      outputEl.style.width = oldWidth;
+      outputEl.style.height = oldHeight;
+      outputEl.style.overflow = oldOverflow;
+
+      // Konwertujemy do PNG
       const tableImgData = canvas.toDataURL("image/png");
 
+      // Obliczamy pozycję w PDF
+      const gap=0;
+      const availableHeight = pageHeight - (margin+desiredLogoHeight+gap+margin);
+      const availableWidth = pageWidth - 2*margin;
+      // Dopasuj do wolnego miejsca
       const ratio = Math.min(availableWidth/canvas.width, availableHeight/canvas.height);
       let finalW = canvas.width*ratio;
       let finalH = canvas.height*ratio;
@@ -762,56 +785,73 @@
       alert("Wystąpił błąd podczas generowania PDF. Sprawdź konsolę.");
     }
   }
-</script>
 
-<script>
-document.getElementById("sendPDFEmail").addEventListener("click", async () => {
-  const name = document.getElementById("name").value.trim();
-  if (!name) return alert("Podaj imię i nazwisko, zanim wyślesz e-mailem!");
+  // ================== Wysyłanie e-mailem ====================
+  document.getElementById("sendPDFEmail").addEventListener("click", async () => {
+    const name = document.getElementById("name").value.trim();
+    if (!name) return alert("Podaj imię i nazwisko, zanim wyślesz e-mailem!");
 
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("portrait","pt","a4");
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF("portrait","pt","a4");
 
-  const outputEl = document.getElementById("output");
-  if (!outputEl) return alert("Najpierw wygeneruj tabelę!");
+    const outputEl = document.getElementById("output");
+    if (!outputEl) return alert("Najpierw wygeneruj tabelę!");
 
-  const canvas = await html2canvas(outputEl,{ scale:2, useCORS:true, allowTaint:false });
-  const imgData = canvas.toDataURL("image/png");
+    // Zmniejszamy wymiary na potrzeby e-mail
+    const oldWidth = outputEl.style.width;
+    const oldHeight = outputEl.style.height;
+    const oldOverflow = outputEl.style.overflow;
+    outputEl.style.width = "600px";
+    outputEl.style.height = "800px";
+    outputEl.style.overflow = "hidden";
 
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 20;
+    const canvas = await html2canvas(outputEl, {
+      scale: 1,
+      useCORS: true,
+      allowTaint: false
+    });
 
-  const ratio = Math.min((pageWidth-2*margin)/canvas.width,(pageHeight-2*margin)/canvas.height);
-  const finalW = canvas.width*ratio;
-  const finalH = canvas.height*ratio;
+    // Przywracamy oryginalne style
+    outputEl.style.width = oldWidth;
+    outputEl.style.height = oldHeight;
+    outputEl.style.overflow = oldOverflow;
 
-  const posX = (pageWidth-finalW)/2;
-  const posY = margin;
-  pdf.addImage(imgData,"PNG",posX,posY,finalW,finalH);
+    const imgData = canvas.toDataURL("image/png");
 
-  const pdfBlob = pdf.output("blob");
-  const reader = new FileReader();
-  reader.onloadend = async () => {
-    const base64 = reader.result.split(",")[1];
-    try {
-      const res = await fetch("/send-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, pdfData: base64 })
-      });
-      if (res.ok) {
-        alert("PDF został wysłany e-mailem!");
-      } else {
-        alert("Błąd przy wysyłaniu PDF.");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 20;
+
+    const ratio = Math.min((pageWidth-2*margin)/canvas.width,(pageHeight-2*margin)/canvas.height);
+    const finalW = canvas.width*ratio;
+    const finalH = canvas.height*ratio;
+
+    const posX = (pageWidth-finalW)/2;
+    const posY = margin;
+    pdf.addImage(imgData,"PNG",posX,posY,finalW,finalH);
+
+    const pdfBlob = pdf.output("blob");
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result.split(",")[1];
+      try {
+        const res = await fetch("/send-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, pdfData: base64 })
+        });
+        if (res.ok) {
+          alert("PDF został wysłany e-mailem!");
+        } else {
+          alert("Błąd przy wysyłaniu PDF.");
+        }
+      } catch (err) {
+        console.error("Błąd fetch /send-pdf", err);
+        alert("Nie udało się wysłać PDF. Sprawdź konsolę.");
       }
-    } catch (err) {
-      console.error("Błąd fetch /send-pdf", err);
-      alert("Nie udało się wysłać PDF. Sprawdź konsolę.");
-    }
-  };
-  reader.readAsDataURL(pdfBlob);
-});
+    };
+    reader.readAsDataURL(pdfBlob);
+  });
 </script>
 </body>
 </html>
