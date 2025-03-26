@@ -262,7 +262,6 @@
   "use strict";
   console.log("Kod IIFE startuje - zapobiegamy ponownemu deklarowaniu zmiennych w global scope.");
 
-  // Stałe / zmienne
   var MAX_HOURS_PER_DAY = 12;
   var MIN_HOURS_PER_DAY = 4;
 
@@ -281,7 +280,7 @@
 
   document.addEventListener("DOMContentLoaded", function(){
     console.log("DOMContentLoaded inside IIFE");
-    // Zmiana rodzaju umowy
+
     document.querySelectorAll('input[name="contractType"]').forEach(function(rad){
       rad.addEventListener("change", onContractChange);
     });
@@ -502,12 +501,16 @@
       var weekend=isWeekend(dateObj);
       var fixHol=isFixedHoliday(d,monthVal);
 
+      // Jeśli user dodał wolne => cHol.type
+      // lub jeśli to święto => "Święto"
+      // Ale jeżeli to "Losowy dzień wolny", to w PDF pokaż "-"
       var holType="";
       if(cHol){
         holType=cHol.type;
-      }else if(fixHol){
+      } else if(fixHol){
         holType="Święto";
       }
+
       var isWork=(!weekend&&!fixHol&&!cHol);
       dayData.push({
         day:d,
@@ -520,6 +523,7 @@
       });
     }
 
+    // Losowe dni wolne => "Losowy dzień wolny", ale w tabeli -> "-" w kolumnie
     if(contractType==="zlecenie" && addRandom){
       console.log("dodajemy losowe wolne (zlecenie)...");
       var pattern=[0,1,3,1,0,0];
@@ -537,6 +541,7 @@
           arr.sort(function(){return 0.5-Math.random();});
           arr.slice(0,need).forEach(function(dd){
             dd.isWorkingDay=false;
+            // Wewnątrz będzie "Losowy dzień wolny", ale w finalnym PDF -> zobacz mapowanie
             dd.holidayType="Losowy dzień wolny";
             window.randomFreeDaysAdded.push(dd);
           });
@@ -546,17 +551,18 @@
 
     var workingDays=dayData.filter(function(x){return x.isWorkingDay;});
     var totalHours=0;
+
     if(contractType==="praca"){
       workingDays.forEach(function(d){
         d.hours=8; d.start="8:00"; d.end="16:00";
       });
       totalHours=workingDays.length*8;
-    }else if(contractType==="praca3/4"){
+    } else if(contractType==="praca3/4"){
       workingDays.forEach(function(d){
         d.hours=6; d.start="8:00"; d.end="14:00";
       });
       totalHours=workingDays.length*6;
-    }else if(contractType==="zlecenie"){
+    } else if(contractType==="zlecenie"){
       totalHours=parseInt(document.getElementById("hours").value,10);
       var hoursArr=distributeHours(totalHours,workingDays.length);
       if(!hoursArr)return;
@@ -583,23 +589,29 @@
     console.log("generujemy tabele HTML (IIFE)...");
     var nameParts=fullName.split(/\s+/);
     var lastName=nameParts.slice(1).join(" ");
+
+    // Modyfikujemy kolumnę -> „Urlop” zamiast „Rodzaj wolnego”
+    // I jeśli holidayType == "Losowy dzień wolny", pokaż "-"
     var rows=dayData.map(function(inf){
       var dd=String(inf.day).padStart(2,'0');
       var mm=String(monthVal).padStart(2,'0');
       var yyyy=yearVal;
       var wkd=inf.date.toLocaleString('pl-PL',{weekday:'short'});
+
       if(inf.isWorkingDay && inf.hours>0){
-        return "<tr>"+
-        "<td>"+inf.day+"</td>"+
-        `<td>${dd}.${mm}.${yyyy} (${wkd})</td>`+
-        `<td>${inf.start}</td>`+
-        `<td>${inf.end}</td>`+
-        `<td>${inf.hours}</td>`+
-        `<td>${lastName}</td>`+
-        "<td></td>"+
-        "<td>-</td>"+
-        "</tr>";
-      }else{
+        return `<tr>
+          <td>${inf.day}</td>
+          <td>${dd}.${mm}.${yyyy} (${wkd})</td>
+          <td>${inf.start}</td>
+          <td>${inf.end}</td>
+          <td>${inf.hours}</td>
+          <td>${lastName}</td>
+          <td></td>
+          <td>-</td>
+        </tr>`;
+      } else {
+        // Zamiast inf.holidayType sprawdź, czy to 'Losowy dzień wolny'
+        var shownHoliday = (inf.holidayType === "Losowy dzień wolny") ? "-" : (inf.holidayType || "-");
         return `<tr class="holiday">
           <td>${inf.day}</td>
           <td>${dd}.${mm}.${yyyy} (${wkd})</td>
@@ -608,10 +620,11 @@
           <td>0</td>
           <td>${lastName}</td>
           <td></td>
-          <td>${inf.holidayType||"-"}</td>
+          <td>${shownHoliday}</td>
         </tr>`;
       }
     });
+
     var sumOfHours=workingDays.reduce(function(a,b){return a+b.hours;},0);
     rows.push(`
       <tr class="fw-bold">
@@ -621,6 +634,7 @@
       </tr>
     `);
 
+    // Kolumna: <th>Urlop</th>
     var tableHTML=`
       <h3 class="mt-4">${monthNames[monthVal-1]} ${yearVal}</h3>
       <h4>${fullName}</h4>
@@ -641,7 +655,7 @@
             <th>Suma godzin</th>
             <th>Podpis zleceniobiorcy</th>
             <th>Podpis zleceniodawcy</th>
-            <th>Rodzaj wolnego</th>
+            <th>Urlop</th>
           </tr>
         </thead>
         <tbody>
