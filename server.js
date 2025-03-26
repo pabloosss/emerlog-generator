@@ -93,6 +93,50 @@ app.post("/send-pdf", async (req, res) => {
     res.status(500).json({ error: "Błąd wysyłki PDF" });
   }
 });
+// Plik z bazą mailową
+const fs = require("fs");
+const mailDB = path.join(__dirname, "mailDB.json");
+
+// Endpoint: pobierz dane admina
+app.get("/admin-data", (req, res) => {
+  if (fs.existsSync(mailDB)) {
+    const data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+    return res.json(data);
+  }
+  return res.json([]);
+});
+
+// Endpoint: dodaj użytkownika do listy
+app.post("/add-user", (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).send("Brak imienia");
+
+  let data = [];
+  if (fs.existsSync(mailDB)) {
+    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+  }
+
+  if (!data.find(e => e.name === name)) {
+    data.push({ name, sent: false });
+    fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
+  }
+
+  res.sendStatus(200);
+});
+
+// Funkcja logowania wysłanego maila (można użyć przy wysyłce)
+function logSentMail(name) {
+  let data = [];
+  if (fs.existsSync(mailDB)) {
+    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+  }
+
+  const index = data.findIndex(e => e.name === name);
+  if (index !== -1) data[index].sent = true;
+  else data.push({ name, sent: true });
+
+  fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
+}
 
 // Start
 app.listen(PORT, () => {
