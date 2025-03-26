@@ -296,6 +296,7 @@
   };
 
   // Tablice do przechowywania dni wolnych
+  // format: { date: 'YYYY-MM-DD', type: '...' }
   window.customHolidays = [];
   window.randomFreeDaysAdded = [];
 
@@ -704,7 +705,6 @@
     document.getElementById("generatePDF").onclick = downloadPDF;
   }
 
-  // ============== Tymczasowe zmniejszenie rozmiaru outputEl przed generowaniem PDF =================
   async function downloadPDF() {
     console.log("downloadPDF triggered");
     try {
@@ -738,13 +738,12 @@
       }
 
       // Tymczasowo zmniejszamy wymiary outputEl
-      // (aby finalny zrzut był nieduży i w efekcie PDF ważył mniej)
       const oldWidth = outputEl.style.width;
       const oldHeight = outputEl.style.height;
       const oldOverflow = outputEl.style.overflow;
       outputEl.style.width = "600px";
       outputEl.style.height = "800px";
-      outputEl.style.overflow = "hidden"; // reszta zawartości się nie wyrenderuje
+      outputEl.style.overflow = "hidden";
 
       // Generujemy zrzut
       const canvas = await html2canvas(outputEl, {
@@ -761,11 +760,9 @@
       // Konwertujemy do PNG
       const tableImgData = canvas.toDataURL("image/png");
 
-      // Obliczamy pozycję w PDF
       const gap=0;
       const availableHeight = pageHeight - (margin+desiredLogoHeight+gap+margin);
       const availableWidth = pageWidth - 2*margin;
-      // Dopasuj do wolnego miejsca
       const ratio = Math.min(availableWidth/canvas.width, availableHeight/canvas.height);
       let finalW = canvas.width*ratio;
       let finalH = canvas.height*ratio;
@@ -786,7 +783,6 @@
     }
   }
 
-  // ================== Wysyłanie e-mailem ====================
   document.getElementById("sendPDFEmail").addEventListener("click", async () => {
     const name = document.getElementById("name").value.trim();
     if (!name) return alert("Podaj imię i nazwisko, zanim wyślesz e-mailem!");
@@ -811,7 +807,6 @@
       allowTaint: false
     });
 
-    // Przywracamy oryginalne style
     outputEl.style.width = oldWidth;
     outputEl.style.height = oldHeight;
     outputEl.style.overflow = oldOverflow;
