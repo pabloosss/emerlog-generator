@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-
 <html lang="pl">
 <head>
-<meta charset="utf-8"/>
-<title>Generator Godzin Rmsped - Word-like Table</title>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<!-- Bootstrap 5 -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-<!-- Font Awesome -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-<style>
+  <meta charset="utf-8"/>
+  <title>Generator Godzin Rmsped - Word-like Table</title>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <style>
     body {
       background-color: #f9f9f9;
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -132,148 +131,185 @@
       margin-top: 5px;
     }
   </style>
-</link></head>
+</head>
 <body>
 <div class="container">
-<!-- Nagłówek -->
-<div class="header">
-<h1><i class="fas fa-clock"></i> Generator Godzin Rmsped</h1>
-<p>Wprowadź dane i wybierz rodzaj umowy.</p>
-</div>
-<!-- Instrukcja -->
-<div class="card mb-4">
-<h5><i class="fas fa-info-circle"></i> Instrukcja</h5>
-<div class="instructions">
-<ul>
-<li>Wybierz rodzaj umowy:
-            <ul>
-<li><strong>Umowa zlecenie</strong> – godziny generowane losowo, <em>opcja "Losowe dni wolne" jest obowiązkowa</em>.</li>
-<li><strong>Umowa o pracę (pełny etat)</strong> – stałe godziny: 8:00–16:00.</li>
-<li><strong>Umowa o pracę (3/4 etatu)</strong> – stałe godziny: 8:00–14:00.</li>
-</ul>
-</li>
-<li>Dla umowy zlecenie wpisz łączną liczbę godzin – dla umów o pracę to pole jest ukryte.</li>
-<li>Wybierz miesiąc i rok oraz (opcjonalnie) dodaj ręcznie dni wolne.</li>
-<li>Opcja „Dodaj losowo dni wolne”:
-            <ul>
-<li><em>Obowiązkowa</em> przy umowie zleceniu (zaznaczona na stałe).</li>
-<li><em>Dobrowolna</em> przy umowie o pracę (pełny etat) i 3/4 etatu.</li>
-</ul>
-</li>
-<li>Dla umowy o pracę (3/4 etatu) zaznacz opcję „Wygeneruj wniosek urlopowy”, aby w PDF-ie na osobnej stronie pojawił się wniosek urlopowy (dni wolne będą prezentowane jako zakresy, np. 04.05.2025 – 06.05.2025).</li>
-<li>Kliknij „Generuj tabelę” i pobierz PDF (PDF będzie miał dwie strony – harmonogram oraz, jeśli dotyczy, wniosek urlopowy).</li>
-</ul>
-</div>
-</div>
-<!-- Formularz -->
-<div class="card mb-4">
-<form id="generatorForm" novalidate="">
-<!-- Wybór rodzaju umowy -->
-<div class="mb-3">
-<label class="form-label">Rodzaj umowy</label>
-<div class="form-check">
-<input checked="" class="form-check-input" id="contractZlecenie" name="contractType" type="radio" value="zlecenie"/>
-<label class="form-check-label" for="contractZlecenie">Umowa zlecenie</label>
-</div>
-<div class="form-check">
-<input class="form-check-input" id="contractPraca" name="contractType" type="radio" value="praca"/>
-<label class="form-check-label" for="contractPraca">Umowa o pracę (pełny etat)</label>
-</div>
-<div class="form-check">
-<input class="form-check-input" id="contract34" name="contractType" type="radio" value="praca3/4"/>
-<label class="form-check-label" for="contract34">Umowa o pracę (3/4 etatu)</label>
-</div>
-</div>
-<!-- Checkbox dla wniosku urlopowego – widoczny tylko przy umowie 3/4 etatu -->
-<div class="mb-3 form-check" id="vacationRequestGroup" style="display:none;">
-<input class="form-check-input" id="generateVacation" type="checkbox"/>
-<label class="form-check-label" for="generateVacation">Wygeneruj wniosek urlopowy</label>
-</div>
-<div class="row">
-<div class="col-md-6 mb-3 form-group required">
-<label class="form-label" for="name">Imię i nazwisko</label>
-<input class="form-control" id="name" required="" type="text"/>
-<div class="invalid-feedback">Wpisz imię i nazwisko.</div>
-</div>
-<!-- Pole "Łączna liczba godzin" – widoczne tylko przy umowie zlecenie -->
-<div class="col-md-6 mb-3 form-group required" id="hoursGroup">
-<label class="form-label" for="hours">Łączna liczba godzin</label>
-<input class="form-control" id="hours" min="1" required="" type="number"/>
-<div class="invalid-feedback">Wpisz liczbę godzin (min 1).</div>
-</div>
-</div>
-<div class="row">
-<div class="col-md-4 mb-3 form-group required">
-<label class="form-label" for="month">Miesiąc</label>
-<select class="form-select" id="month" required="">
-<option value="">Wybierz...</option>
-<option value="1">Styczeń</option>
-<option value="2">Luty</option>
-<option value="3">Marzec</option>
-<option value="4">Kwiecień</option>
-<option value="5">Maj</option>
-<option value="6">Czerwiec</option>
-<option value="7">Lipiec</option>
-<option value="8">Sierpień</option>
-<option value="9">Wrzesień</option>
-<option value="10">Październik</option>
-<option value="11">Listopad</option>
-<option value="12">Grudzień</option>
-</select>
-<div class="invalid-feedback">Wybierz miesiąc.</div>
-</div>
-<div class="col-md-4 mb-3 form-group required">
-<label class="form-label" for="year">Rok</label>
-<input class="form-control" id="year" min="1900" required="" type="number" value="2025"/>
-<div class="invalid-feedback">Podaj rok (np. 2025).</div>
-</div>
-<div class="col-md-4 mb-3">
-<small class="form-text">Praca kończy się zawsze przed 20:00.</small>
-</div>
-</div>
-<div class="mb-3">
-<label class="form-label">Dodatkowe dni wolne</label>
-<div class="input-group">
-<input class="form-control" id="holidayPicker" type="date"/>
-<button class="btn btn-secondary" id="addHoliday" type="button">Dodaj wolne</button>
-</div>
-<ul class="holidays-list" id="holidaysList"></ul>
-</div>
-<!-- Opcja "losowe dni wolne" – zawsze widoczna, ale wymuszone 'checked' przy zleceniu -->
-<div class="mb-3 form-check" id="randomHolidaysGroup">
-<input class="form-check-input" id="randomHolidays" type="checkbox"/>
-<label class="form-check-label" for="randomHolidays">Dodaj losowo dni wolne</label>
-</div>
-<button class="btn btn-primary" type="submit">Generuj tabelę</button>
-</form>
-</div>
-<!-- Wyświetlenie harmonogramu -->
-<div class="table-responsive" id="output"></div>
-<!-- Wniosek urlopowy – ukryty, a jego zawartość zostanie wykorzystana do PDF (druga strona) -->
-<div id="vacationRequest" style="display:none;"></div>
-<div class="mt-3" id="exportButtons" style="display:none;">
-  <button class="btn btn-success" id="generatePDF"><i class="far fa-file-pdf"></i> Pobierz jako PDF</button>
-  <button class="btn btn-primary mt-2" id="sendPDFEmail">Wyślij tabelę e-mailem</button>
-</div>
+  <!-- Nagłówek -->
+  <div class="header">
+    <h1><i class="fas fa-clock"></i> Generator Godzin Rmsped</h1>
+    <p>Wprowadź dane i wybierz rodzaj umowy.</p>
+  </div>
 
-<!-- 🚨 WRZUĆ TUTAJ -->
-<div class="text-center mt-4">
-  <a href="admin.html" class="btn btn-outline-dark">
-    <i class="fas fa-user-shield"></i> Panel Administratora
-  </a>
-</div>
+  <!-- Instrukcja -->
+  <div class="card mb-4">
+    <h5><i class="fas fa-info-circle"></i> Instrukcja</h5>
+    <div class="instructions">
+      <ul>
+        <li>Wybierz rodzaj umowy:
+          <ul>
+            <li><strong>Umowa zlecenie</strong> – godziny generowane losowo, <em>opcja "Losowe dni wolne" jest obowiązkowa</em>.</li>
+            <li><strong>Umowa o pracę (pełny etat)</strong> – stałe godziny: 8:00–16:00.</li>
+            <li><strong>Umowa o pracę (3/4 etatu)</strong> – stałe godziny: 8:00–14:00.</li>
+          </ul>
+        </li>
+        <li>Dla umowy zlecenie wpisz łączną liczbę godzin – dla umów o pracę to pole jest ukryte.</li>
+        <li>Wybierz miesiąc i rok oraz (opcjonalnie) dodaj ręcznie dni wolne.</li>
+        <li>Opcja „Dodaj losowo dni wolne”:
+          <ul>
+            <li><em>Obowiązkowa</em> przy umowie zleceniu (zaznaczona na stałe).</li>
+            <li><em>Dobrowolna</em> przy umowie o pracę (pełny etat) i 3/4 etatu.</li>
+          </ul>
+        </li>
+        <li>Dla umowy o pracę (3/4 etatu) zaznacz opcję „Wygeneruj wniosek urlopowy”, aby w PDF-ie na osobnej stronie pojawił się wniosek urlopowy (dni wolne będą prezentowane jako zakresy, np. 04.05.2025 – 06.05.2025).</li>
+        <li>Kliknij „Generuj tabelę” i pobierz PDF (PDF będzie miał dwie strony – harmonogram oraz, jeśli dotyczy, wniosek urlopowy).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Formularz -->
+  <div class="card mb-4">
+    <form id="generatorForm" novalidate="">
+      <!-- Wybór rodzaju umowy -->
+      <div class="mb-3">
+        <label class="form-label">Rodzaj umowy</label>
+        <div class="form-check">
+          <input checked="" class="form-check-input" id="contractZlecenie" name="contractType" type="radio" value="zlecenie"/>
+          <label class="form-check-label" for="contractZlecenie">Umowa zlecenie</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" id="contractPraca" name="contractType" type="radio" value="praca"/>
+          <label class="form-check-label" for="contractPraca">Umowa o pracę (pełny etat)</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" id="contract34" name="contractType" type="radio" value="praca3/4"/>
+          <label class="form-check-label" for="contract34">Umowa o pracę (3/4 etatu)</label>
+        </div>
+      </div>
+
+      <!-- Checkbox dla wniosku urlopowego – widoczny tylko przy umowie 3/4 etatu -->
+      <div class="mb-3 form-check" id="vacationRequestGroup" style="display:none;">
+        <input class="form-check-input" id="generateVacation" type="checkbox"/>
+        <label class="form-check-label" for="generateVacation">Wygeneruj wniosek urlopowy</label>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3 form-group required">
+          <label class="form-label" for="name">Imię i nazwisko</label>
+          <input class="form-control" id="name" required="" type="text"/>
+          <div class="invalid-feedback">Wpisz imię i nazwisko.</div>
+        </div>
+        <!-- Pole "Łączna liczba godzin" – widoczne tylko przy umowie zlecenie -->
+        <div class="col-md-6 mb-3 form-group required" id="hoursGroup">
+          <label class="form-label" for="hours">Łączna liczba godzin</label>
+          <input class="form-control" id="hours" min="1" required="" type="number"/>
+          <div class="invalid-feedback">Wpisz liczbę godzin (min 1).</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4 mb-3 form-group required">
+          <label class="form-label" for="month">Miesiąc</label>
+          <select class="form-select" id="month" required="">
+            <option value="">Wybierz...</option>
+            <option value="1">Styczeń</option>
+            <option value="2">Luty</option>
+            <option value="3">Marzec</option>
+            <option value="4">Kwiecień</option>
+            <option value="5">Maj</option>
+            <option value="6">Czerwiec</option>
+            <option value="7">Lipiec</option>
+            <option value="8">Sierpień</option>
+            <option value="9">Wrzesień</option>
+            <option value="10">Październik</option>
+            <option value="11">Listopad</option>
+            <option value="12">Grudzień</option>
+          </select>
+          <div class="invalid-feedback">Wybierz miesiąc.</div>
+        </div>
+        <div class="col-md-4 mb-3 form-group required">
+          <label class="form-label" for="year">Rok</label>
+          <input class="form-control" id="year" min="1900" required="" type="number" value="2025"/>
+          <div class="invalid-feedback">Podaj rok (np. 2025).</div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <small class="form-text">Praca kończy się zawsze przed 20:00.</small>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Dodatkowe dni wolne</label>
+        <div class="input-group">
+          <input class="form-control" id="holidayPicker" type="date"/>
+          <button class="btn btn-secondary" id="addHoliday" type="button">Dodaj wolne</button>
+        </div>
+        <ul class="holidays-list" id="holidaysList"></ul>
+      </div>
+
+      <!-- Opcja "losowe dni wolne" – zawsze widoczna, ale wymuszone 'checked' przy zleceniu -->
+      <div class="mb-3 form-check" id="randomHolidaysGroup">
+        <input class="form-check-input" id="randomHolidays" type="checkbox"/>
+        <label class="form-check-label" for="randomHolidays">Dodaj losowo dni wolne</label>
+      </div>
+
+      <!-- NOWE SEKCJE – rodzaje urlopów dla umowy o pracę, L4 dla zlecenia -->
+      <!-- Rodzaje dni urlopowych (tylko dla umowy o pracę) -->
+      <div class="mb-3" id="workLeaveTypes" style="display:none;">
+        <label class="form-label">Rodzaje dni urlopowych (dla umowy o pracę)</label>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="leaveL4">
+          <label class="form-check-label" for="leaveL4">Zwolnienie lekarskie (L4)</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="leaveOkolicznosciowy">
+          <label class="form-check-label" for="leaveOkolicznosciowy">Urlop okolicznościowy</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="leaveWypoczynkowy">
+          <label class="form-check-label" for="leaveWypoczynkowy">Urlop wypoczynkowy</label>
+        </div>
+      </div>
+
+      <!-- L4 dla zlecenia (tylko dla umowy zlecenie) -->
+      <div class="mb-3" id="zlecenieL4" style="display:none;">
+        <label class="form-label">Dodatkowa opcja (tylko umowa zlecenie)</label>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="zlecenieL4Check">
+          <label class="form-check-label" for="zlecenieL4Check">Zwolnienie lekarskie (L4)</label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" type="submit">Generuj tabelę</button>
+    </form>
+  </div>
+
+  <!-- Wyświetlenie harmonogramu -->
+  <div class="table-responsive" id="output"></div>
+  <!-- Wniosek urlopowy – ukryty, a jego zawartość zostanie wykorzystana do PDF (druga strona) -->
+  <div id="vacationRequest" style="display:none;"></div>
+  <div class="mt-3" id="exportButtons" style="display:none;">
+    <button class="btn btn-success" id="generatePDF"><i class="far fa-file-pdf"></i> Pobierz jako PDF</button>
+    <button class="btn btn-primary mt-2" id="sendPDFEmail">Wyślij tabelę e-mailem</button>
+  </div>
+
+  <!-- 🚨 WRZUĆ TUTAJ -->
+  <div class="text-center mt-4">
+    <a href="admin.html" class="btn btn-outline-dark">
+      <i class="fas fa-user-shield"></i> Panel Administratora
+    </a>
+  </div>
 
 </div> <!-- TO JEST KONIEC .container -->
 
-
 <footer>© 2023 Emerlog</footer>
+
 <!-- Biblioteki JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <script>
     // -------------------------------------------------------------------------------------
-    // MAPA "PIERWSZYCH DNI ROBOCZYCH" DLA UMOWY ZLECENIE. Gdy brak wpisu, fallback = 1
+    // MAPA \"PIERWSZYCH DNI ROBOCZYCH\" DLA UMOWY ZLECENIE. Gdy brak wpisu, fallback = 1
     // (Skopiuj tu swoją listę, jeśli potrzebujesz specjalnych dat).
     // -------------------------------------------------------------------------------------
     const FIRST_WORKING_DAYS = {
@@ -304,26 +340,45 @@
     const MAX_HOURS_PER_DAY = 12;
     const MIN_HOURS_PER_DAY = 4;
 
-    // Obsługa zmiany rodzaju umowy
+    // --------------------------------------------------------------------------------
+    // Obsługa zmiany rodzaju umowy – NOWE FRAGMENTY z typami urlopów i L4
+    // --------------------------------------------------------------------------------
     document.querySelectorAll('input[name="contractType"]').forEach(input => {
       input.addEventListener("change", () => {
-        const type = document.querySelector('input[name="contractType"]:checked').value;
-        if (type === "praca" || type === "praca3/4") {
-          document.getElementById("hoursGroup").style.display = "none";
-          document.getElementById("hours").required = false;
-          document.getElementById("vacationRequestGroup").style.display = (type === "praca3/4") ? "block" : "none";
+        const type = document.querySelector('input[name=\"contractType\"]:checked').value;
+        const randomHolidaysCheckbox = document.getElementById(\"randomHolidays\");
+        const workLeaveTypes = document.getElementById(\"workLeaveTypes\");
+        const zlecenieL4 = document.getElementById(\"zlecenieL4\");
 
-          document.getElementById("randomHolidays").disabled = false;
-          document.getElementById("randomHolidays").checked = false;
+        // Umowa o pracę (pełny etat / 3/4)
+        if (type === \"praca\" || type === \"praca3/4\") {
+          document.getElementById(\"hoursGroup\").style.display = \"none\";
+          document.getElementById(\"hours\").required = false;
+          document.getElementById(\"vacationRequestGroup\").style.display = (type === \"praca3/4\") ? \"block\" : \"none\";
+
+          // Losowe dni wolne WYŁĄCZONE
+          randomHolidaysCheckbox.checked = false;
+          randomHolidaysCheckbox.disabled = true;
+
+          // Pokaż opcje urlopowe pracy
+          workLeaveTypes.style.display = \"block\";
+          // Ukryj L4 dla zlecenia
+          zlecenieL4.style.display = \"none\";
+
         } else {
-          // "zlecenie"
-          document.getElementById("hoursGroup").style.display = "block";
-          document.getElementById("hours").required = true;
-          document.getElementById("vacationRequestGroup").style.display = "none";
+          // Umowa zlecenie
+          document.getElementById(\"hoursGroup\").style.display = \"block\";
+          document.getElementById(\"hours\").required = true;
+          document.getElementById(\"vacationRequestGroup\").style.display = \"none\";
 
-          // "Losowe dni wolne" musi być zaznaczone i zablokowane
-          document.getElementById("randomHolidays").checked = true;
-          document.getElementById("randomHolidays").disabled = true;
+          // Losowe dni wolne ZAZNACZONE i zablokowane
+          randomHolidaysCheckbox.checked = true;
+          randomHolidaysCheckbox.disabled = true;
+
+          // Ukryj opcje urlopowe pracy
+          workLeaveTypes.style.display = \"none\";
+          // Pokaż checkbox L4 zlecenia
+          zlecenieL4.style.display = \"block\";
         }
       });
     });
@@ -357,27 +412,27 @@
       return groups;
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const form = document.getElementById("generatorForm");
-      form.addEventListener("submit", (e) => {
+    document.addEventListener(\"DOMContentLoaded\", () => {
+      const form = document.getElementById(\"generatorForm\");
+      form.addEventListener(\"submit\", (e) => {
         e.preventDefault();
         if (!form.checkValidity()) {
           e.stopPropagation();
         } else {
           generateTable();
         }
-        form.classList.add("was-validated");
+        form.classList.add(\"was-validated\");
       });
 
       // Obsługa dodawania dni wolnych ręcznie
-      const addHolidayBtn = document.getElementById("addHoliday");
-      const holidayPicker = document.getElementById("holidayPicker");
-      const holidaysListEl = document.getElementById("holidaysList");
+      const addHolidayBtn = document.getElementById(\"addHoliday\");
+      const holidayPicker = document.getElementById(\"holidayPicker\");
+      const holidaysListEl = document.getElementById(\"holidaysList\");
 
-      addHolidayBtn.addEventListener("click", () => {
+      addHolidayBtn.addEventListener(\"click\", () => {
         const selDate = holidayPicker.value;
         if (!selDate) {
-          alert("Wybierz datę!");
+          alert(\"Wybierz datę!\");
           return;
         }
         if (!window.customHolidays.includes(selDate)) {
@@ -387,14 +442,14 @@
       });
 
       function renderHolidays() {
-        holidaysListEl.innerHTML = "";
+        holidaysListEl.innerHTML = \"\";
         window.customHolidays.forEach(h => {
-          const li = document.createElement("li");
+          const li = document.createElement(\"li\");
           li.textContent = h;
-          const btn = document.createElement("button");
-          btn.classList.add("btn", "btn-sm", "btn-danger", "ms-2");
-          btn.textContent = "Usuń";
-          btn.addEventListener("click", () => {
+          const btn = document.createElement(\"button\");
+          btn.classList.add(\"btn\", \"btn-sm\", \"btn-danger\", \"ms-2\");
+          btn.textContent = \"Usuń\";
+          btn.addEventListener(\"click\", () => {
             window.customHolidays = window.customHolidays.filter(x => x !== h);
             renderHolidays();
           });
@@ -404,44 +459,44 @@
       }
 
       // Ustawianie min/max w datePickerze (holidayPicker)
-      const monthEl = document.getElementById("month");
-      const yearEl = document.getElementById("year");
+      const monthEl = document.getElementById(\"month\");
+      const yearEl = document.getElementById(\"year\");
 
-      monthEl.addEventListener("change", updateHolidayPickerRange);
-      yearEl.addEventListener("change", updateHolidayPickerRange);
+      monthEl.addEventListener(\"change\", updateHolidayPickerRange);
+      yearEl.addEventListener(\"change\", updateHolidayPickerRange);
 
       function updateHolidayPickerRange() {
         const mVal = parseInt(monthEl.value, 10);
         const yVal = parseInt(yearEl.value, 10);
         if (!mVal || !yVal) {
-          holidayPicker.removeAttribute("min");
-          holidayPicker.removeAttribute("max");
+          holidayPicker.removeAttribute(\"min\");
+          holidayPicker.removeAttribute(\"max\");
           return;
         }
         const daysInMonth = new Date(yVal, mVal, 0).getDate();
         const mm = String(mVal).padStart(2, '0');
         const minDate = `${yVal}-${mm}-01`;
         const maxDate = `${yVal}-${mm}-${daysInMonth}`;
-        holidayPicker.setAttribute("min", minDate);
-        holidayPicker.setAttribute("max", maxDate);
+        holidayPicker.setAttribute(\"min\", minDate);
+        holidayPicker.setAttribute(\"max\", maxDate);
         if (holidayPicker.value) {
           if (holidayPicker.value < minDate || holidayPicker.value > maxDate) {
-            holidayPicker.value = "";
+            holidayPicker.value = \"\";
           }
         }
       }
     });
 
-    // Stałe święta (format "dd-mm")
+    // Stałe święta (format \"dd-mm\")
     const fixedHolidays = [
-      "01-01", "06-01", "20-04", "21-04",
-      "01-05", "03-05", "08-06", "19-06",
-      "15-08", "01-11", "11-11",
-      "25-12", "26-12"
+      \"01-01\", \"06-01\", \"20-04\", \"21-04\",
+      \"01-05\", \"03-05\", \"08-06\", \"19-06\",
+      \"15-08\", \"01-11\", \"11-11\",
+      \"25-12\", \"26-12\"
     ];
 
     function isHoliday(day, month, year) {
-      const yyyy = String(year).padStart(4, "0");
+      const yyyy = String(year).padStart(4, \"0\");
       const mm = String(month).padStart(2, '0');
       const dd = String(day).padStart(2, '0');
       const fullDate = `${yyyy}-${mm}-${dd}`;
@@ -517,7 +572,7 @@
       }
       let finalSum = arr.reduce((a, b) => a + b, 0);
       if (finalSum !== totalHours) {
-        alert("Nie udało się dopasować godzin do wskazanej sumy.");
+        alert(\"Nie udało się dopasować godzin do wskazanej sumy.\");
         return null;
       }
       return arr;
@@ -533,18 +588,18 @@
     // Funkcja generująca tabelę + (opcjonalnie) wniosek urlopowy
     function generateTable() {
       window.randomFreeDaysAdded = [];
-      const fullName = document.getElementById("name").value.trim();
-      const monthVal = parseInt(document.getElementById("month").value, 10);
-      const yearVal = parseInt(document.getElementById("year").value, 10);
-      const addRandom = document.getElementById("randomHolidays").checked;
-      const contractType = document.querySelector('input[name="contractType"]:checked').value;
+      const fullName = document.getElementById(\"name\").value.trim();
+      const monthVal = parseInt(document.getElementById(\"month\").value, 10);
+      const yearVal = parseInt(document.getElementById(\"year\").value, 10);
+      const addRandom = document.getElementById(\"randomHolidays\").checked;
+      const contractType = document.querySelector('input[name=\"contractType\"]:checked').value;
       if (!fullName || !monthVal || !yearVal) {
-        alert("Proszę wypełnić wszystkie wymagane pola!");
+        alert(\"Proszę wypełnić wszystkie wymagane pola!\");
         return;
       }
       
       let totalHours;
-      const monthNames = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+      const monthNames = [\"Styczeń\", \"Luty\", \"Marzec\", \"Kwiecień\", \"Maj\", \"Czerwiec\", \"Lipiec\", \"Sierpień\", \"Wrzesień\", \"Październik\", \"Listopad\", \"Grudzień\"];
       const daysInMonth = new Date(yearVal, monthVal, 0).getDate();
       let dayData = [];
       for (let d = 1; d <= daysInMonth; d++) {
@@ -556,14 +611,14 @@
           date: dateObj,
           isWorkingDay: (!isWeekend && !holiday),
           hours: 0,
-          start: "-",
-          end: "-",
+          start: \"-\",
+          end: \"-\",
           randomHoliday: false
         });
       }
       
-      // Umowa zlecenie + "losowe dni wolne"
-      if (contractType === "zlecenie" && addRandom) {
+      // Umowa zlecenie + \"losowe dni wolne\"
+      if (contractType === \"zlecenie\" && addRandom) {
         // Losowy wzorzec, np. [0, 1, 3, 1, 0, 0]
         const freeDaysPattern = [0, 1, 3, 1, 0, 0];
         let grouped = {};
@@ -583,8 +638,8 @@
             selected.forEach(day => {
               day.isWorkingDay = false;
               day.hours = 0;
-              day.start = "-";
-              day.end = "-";
+              day.start = \"-\";
+              day.end = \"-\";
               day.randomHoliday = true;
               window.randomFreeDaysAdded.push(day);
             });
@@ -594,24 +649,24 @@
       
       let workingDays = dayData.filter(d => d.isWorkingDay);
       
-      if (contractType === "praca") {
+      if (contractType === \"praca\") {
         workingDays.forEach(day => {
           day.hours = 8;
-          day.start = "8:00";
-          day.end = "16:00";
+          day.start = \"8:00\";
+          day.end = \"16:00\";
         });
         totalHours = workingDays.length * 8;
       }
-      else if (contractType === "praca3/4") {
+      else if (contractType === \"praca3/4\") {
         workingDays.forEach(day => {
           day.hours = 6;
-          day.start = "8:00";
-          day.end = "14:00";
+          day.start = \"8:00\";
+          day.end = \"14:00\";
         });
         totalHours = workingDays.length * 6;
       }
-      else if (contractType === "zlecenie") {
-        totalHours = parseInt(document.getElementById("hours").value, 10);
+      else if (contractType === \"zlecenie\") {
+        totalHours = parseInt(document.getElementById(\"hours\").value, 10);
         let hoursArray = distributeHours(totalHours, workingDays.length);
         if (!hoursArray) return;
         for (let i = 0; i < workingDays.length; i++) {
@@ -625,8 +680,8 @@
             return;
           }
           wd.hours = h;
-          wd.start = sH + ":00";
-          wd.end = eH + ":00";
+          wd.start = sH + \":00\";
+          wd.end = eH + \":00\";
         }
         let finalSum = workingDays.reduce((acc, w) => acc + w.hours, 0);
         if (finalSum !== totalHours) {
@@ -636,8 +691,8 @@
       }
       
       // Tworzymy finalną tabelę
-      const nameParts = fullName.split(/\s+/);
-      const lastName = nameParts.slice(1).join(" ");
+      const nameParts = fullName.split(/\\s+/);
+      const lastName = nameParts.slice(1).join(\" \");
       const rows = dayData.map(dInfo => {
         const dd = String(dInfo.day).padStart(2, '0');
         const mm = String(monthVal).padStart(2, '0');
@@ -655,7 +710,7 @@
           </tr>`;
         } else {
           // Dzień wolny
-          return `<tr class="holiday">
+          return `<tr class=\"holiday\">
             <td>${dInfo.day}</td>
             <td>${dd}.${mm}.${yyyy} (${weekday})</td>
             <td>-</td>
@@ -667,25 +722,25 @@
         }
       });
 
-      // Dodajemy wiersz z sumą godzin (poprawione)
+      // Dodajemy wiersz z sumą godzin
       const sumOfHours = workingDays.reduce((acc, d) => acc + d.hours, 0);
       rows.push(`
-        <tr class="fw-bold">
-          <td colspan="4">Suma godzin:</td>
+        <tr class=\"fw-bold\">
+          <td colspan=\"4\">Suma godzin:</td>
           <td>${sumOfHours}</td>
-          <td colspan="2"></td>
+          <td colspan=\"2\"></td>
         </tr>
       `);
 
       let tableHTML = `
-        <h3 class="mt-4">${monthNames[monthVal - 1]} ${yearVal}</h3>
+        <h3 class=\"mt-4\">${monthNames[monthVal - 1]} ${yearVal}</h3>
         <h4>${fullName}</h4>
         <p><strong>Rodzaj umowy: ${
-          contractType === "praca" ? "Umowa o pracę (8:00 - 16:00)" :
-          contractType === "praca3/4" ? "Umowa o pracę (3/4 etatu, 8:00 - 14:00)" :
-          "Umowa zlecenie"
+          contractType === \"praca\" ? \"Umowa o pracę (8:00 - 16:00)\" :
+          contractType === \"praca3/4\" ? \"Umowa o pracę (3/4 etatu, 8:00 - 14:00)\" :
+          \"Umowa zlecenie\"
         }</strong></p>
-        <table class="final-table">
+        <table class=\"final-table\">
           <thead>
             <tr>
               <th>Dzień</th>
@@ -698,7 +753,7 @@
             </tr>
           </thead>
           <tbody>
-            ${rows.join("")}
+            ${rows.join(\"\")}
           </tbody>
         </table>
       `;
@@ -707,7 +762,7 @@
       // Generujemy wniosek urlopowy (druga strona)
       // ------------------------------------------
       if (
-        (contractType === "zlecenie" || (contractType === "praca3/4" && document.getElementById("generateVacation").checked))
+        (contractType === \"zlecenie\" || (contractType === \"praca3/4\" && document.getElementById(\"generateVacation\").checked))
         && window.randomFreeDaysAdded.length > 0
       ) {
         let sortedDates = window.randomFreeDaysAdded.map(day => day.date).sort((a, b) => a - b);
@@ -716,7 +771,7 @@
 
         // Data wystawienia => jeżeli zlecenie -> 1. roboczy z mapy (lub fallback=1); w innym wypadku dzisiejsza data
         let requestDate = new Date();
-        if (contractType === "zlecenie") {
+        if (contractType === \"zlecenie\") {
           let firstDay = 1; // fallback
           if (FIRST_WORKING_DAYS[yearVal] && FIRST_WORKING_DAYS[yearVal][monthVal]) {
             firstDay = FIRST_WORKING_DAYS[yearVal][monthVal];
@@ -726,78 +781,72 @@
         const requestDateFormatted = formatDate(requestDate);
 
         const vacationHTML = `
-          <div id="vacationRequest" style="display:none; margin: 20px auto; max-width: 600px; font-family: Arial, sans-serif;">
-            
+          <div id=\"vacationRequest\" style=\"display:none; margin: 20px auto; max-width: 600px; font-family: Arial, sans-serif;\">
             <!-- Logo firmy Emerlog -->
             <img 
-              src="https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020"
-              alt="Logo Emerlog"
-              crossorigin="anonymous"
-              style="display:block; margin: 0 auto 20px; max-height: 70px;"
+              src=\"https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020\"
+              alt=\"Logo Emerlog\"
+              crossorigin=\"anonymous\"
+              style=\"display:block; margin: 0 auto 20px; max-height: 70px;\"
             />
-
-            <h3 style="text-align: center; font-weight: bold; margin-bottom: 20px;">
+            <h3 style=\"text-align: center; font-weight: bold; margin-bottom: 20px;\">
               WNIOSEK URLOPOWY
             </h3>
-
-            <p style="margin-bottom: 5px;">
+            <p style=\"margin-bottom: 5px;\">
               <strong>Firma:</strong> Emerlog Sp. z o.o.
             </p>
-            <p style="margin-bottom: 5px;">
+            <p style=\"margin-bottom: 5px;\">
               <strong>Imię i nazwisko wnioskującego:</strong> ${fullName}
             </p>
-            <p style="margin-bottom: 5px;">
+            <p style=\"margin-bottom: 5px;\">
               <strong>Data wystawienia:</strong> ${requestDateFormatted}
             </p>
-            <p style="margin-bottom: 5px;">
+            <p style=\"margin-bottom: 5px;\">
               <strong>Liczba dni wolnych:</strong> ${vacationDaysCount}
             </p>
-
-            <p style="margin-top: 20px; margin-bottom: 10px;">
+            <p style=\"margin-top: 20px; margin-bottom: 10px;\">
               Poniżej przedstawiam zakres dni urlopowych (ciągłe dni wolne zostały zgrupowane):
             </p>
-
-            <ul style="margin-bottom: 20px; list-style-type: disc; padding-left: 20px;">
+            <ul style=\"margin-bottom: 20px; list-style-type: disc; padding-left: 20px;\">
               ${
                 groups.map(g => {
                   const start = formatDate(g.start);
                   const end = formatDate(g.end);
                   return `<li>${start === end ? start : `${start} – ${end}`}</li>`;
-                }).join("")
+                }).join(\"\\n\")
               }
             </ul>
-
-            <div style="text-align:center; margin-top:40px;">
-              <p class="signatureName">${fullName}</p>
-              <hr class="signatureLine">
+            <div style=\"text-align:center; margin-top:40px;\">
+              <p class=\"signatureName\">${fullName}</p>
+              <hr class=\"signatureLine\">
             </div>
           </div>
         `;
         tableHTML += vacationHTML;
       } else {
         // Czyścimy w razie czego stary wniosek
-        document.getElementById("vacationRequest").innerHTML = "";
+        document.getElementById(\"vacationRequest\").innerHTML = \"\";
       }
       
-      document.getElementById("output").innerHTML = tableHTML;
-      document.getElementById("exportButtons").style.display = "block";
-      document.getElementById("generatePDF").onclick = downloadPDF;
+      document.getElementById(\"output\").innerHTML = tableHTML;
+      document.getElementById(\"exportButtons\").style.display = \"block\";
+      document.getElementById(\"generatePDF\").onclick = downloadPDF;
     }
 
     // Generowanie PDF – dwie strony: 1) tabela, 2) wniosek urlopowy
     async function downloadPDF() {
-      console.log("downloadPDF triggered");
+      console.log(\"downloadPDF triggered\");
       try {
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF("portrait", "pt", "a4");
+        const pdf = new jsPDF(\"portrait\", \"pt\", \"a4\");
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         const margin = 20;
 
-        // Pierwsze logo (podmienione)
-        const logoImageURL = "https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
+        // Pierwsze logo
+        const logoImageURL = \"https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020\";
         const logoImg = new Image();
-        logoImg.crossOrigin = "Anonymous";
+        logoImg.crossOrigin = \"Anonymous\";
         logoImg.src = logoImageURL;
         await new Promise(resolve => { logoImg.onload = resolve; });
 
@@ -811,15 +860,15 @@
         const posY_logo = margin;
         
         // Strona 1 – logo
-        pdf.addImage(logoImg, "PNG", posX_logo, posY_logo, desiredLogoWidth, desiredLogoHeight);
+        pdf.addImage(logoImg, \"PNG\", posX_logo, posY_logo, desiredLogoWidth, desiredLogoHeight);
 
         const gap = 0;
         const availableHeight = pageHeight - (margin + desiredLogoHeight + gap + margin);
         const availableWidth = pageWidth - 2 * margin;
 
-        const outputEl = document.getElementById("output");
+        const outputEl = document.getElementById(\"output\");
         if (!outputEl) {
-          alert("Brak elementu #output do wygenerowania PDF.");
+          alert(\"Brak elementu #output do wygenerowania PDF.\");
           return;
         }
 
@@ -829,7 +878,7 @@
           useCORS: true,
           allowTaint: false
         });
-        const tableImgData = canvas.toDataURL("image/png");
+        const tableImgData = canvas.toDataURL(\"image/png\");
 
         const ratio = Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
         let finalW = canvas.width * ratio;
@@ -847,24 +896,24 @@
         posX_table = Math.max(posX_table, margin);
         posY_table = Math.max(posY_table, margin + desiredLogoHeight + gap);
 
-        pdf.addImage(tableImgData, "PNG", posX_table, posY_table, finalW, finalH);
+        pdf.addImage(tableImgData, \"PNG\", posX_table, posY_table, finalW, finalH);
 
         // Druga strona (wniosek), jeśli dotyczy
-        const extraVacationEl = document.getElementById("vacationRequest");
-        let extraVacationBackup = "";
+        const extraVacationEl = document.getElementById(\"vacationRequest\");
+        let extraVacationBackup = \"\";
         if (extraVacationEl) {
           extraVacationBackup = extraVacationEl.style.display;
-          extraVacationEl.style.display = "block";
+          extraVacationEl.style.display = \"block\";
         }
         
-        if (extraVacationEl && extraVacationEl.innerHTML.trim() !== "") {
+        if (extraVacationEl && extraVacationEl.innerHTML.trim() !== \"\") {
           pdf.addPage();
           const canvasVacation = await html2canvas(extraVacationEl, {
             scale: 2,
             useCORS: true,
             allowTaint: false
           });
-          const vacImgData = canvasVacation.toDataURL("image/png");
+          const vacImgData = canvasVacation.toDataURL(\"image/png\");
 
           const availableHeightVac = pageHeight - 2 * margin;
           const availableWidthVac = pageWidth - 2 * margin;
@@ -885,37 +934,38 @@
           posXVac = Math.max(posXVac, margin);
           posYVac = Math.max(posYVac, margin);
 
-          pdf.addImage(vacImgData, "PNG", posXVac, posYVac, finalWVac, finalHVac);
+          pdf.addImage(vacImgData, \"PNG\", posXVac, posYVac, finalWVac, finalHVac);
         }
 
-        pdf.save("Tabela_Godzinowa_Pion.pdf");
+        pdf.save(\"Tabela_Godzinowa_Pion.pdf\");
 
         if (extraVacationEl) {
           extraVacationEl.style.display = extraVacationBackup;
         }
       } catch (error) {
-        console.error("Błąd podczas generowania PDF:", error);
-        alert("Wystąpił błąd podczas generowania PDF. Sprawdź konsolę.");
+        console.error(\"Błąd podczas generowania PDF:\", error);
+        alert(\"Wystąpił błąd podczas generowania PDF. Sprawdź konsolę.\");
       }
     }
-  </script>
+</script>
+
 <script>
-document.getElementById("sendPDFEmail").addEventListener("click", async () => {
-  const name = document.getElementById("name").value.trim();
-  if (!name) return alert("Podaj imię i nazwisko, zanim wyślesz e-mailem!");
+document.getElementById(\"sendPDFEmail\").addEventListener(\"click\", async () => {
+  const name = document.getElementById(\"name\").value.trim();
+  if (!name) return alert(\"Podaj imię i nazwisko, zanim wyślesz e-mailem!\");
 
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("portrait", "pt", "a4");
+  const pdf = new jsPDF(\"portrait\", \"pt\", \"a4\");
 
-  const outputEl = document.getElementById("output");
-  if (!outputEl) return alert("Najpierw wygeneruj tabelę!");
+  const outputEl = document.getElementById(\"output\");
+  if (!outputEl) return alert(\"Najpierw wygeneruj tabelę!\");
 
   const canvas = await html2canvas(outputEl, {
     scale: 2,
     useCORS: true,
     allowTaint: false
   });
-  const imgData = canvas.toDataURL("image/png");
+  const imgData = canvas.toDataURL(\"image/png\");
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -928,29 +978,31 @@ document.getElementById("sendPDFEmail").addEventListener("click", async () => {
   const posX = (pageWidth - finalW) / 2;
   const posY = margin;
 
-  pdf.addImage(imgData, "PNG", posX, posY, finalW, finalH);
+  pdf.addImage(imgData, \"PNG\", posX, posY, finalW, finalH);
 
-  const pdfBlob = pdf.output("blob");
+  const pdfBlob = pdf.output(\"blob\");
   const reader = new FileReader();
   reader.onloadend = async () => {
-    const base64 = reader.result.split(",")[1];
+    const base64 = reader.result.split(\",\")[1];
     try {
-      const res = await fetch("/send-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(\"/send-pdf\", {
+        method: \"POST\",
+        headers: { \"Content-Type\": \"application/json\" },
         body: JSON.stringify({ name, pdfData: base64 })
       });
       if (res.ok) {
-        alert("PDF został wysłany e-mailem!");
+        alert(\"PDF został wysłany e-mailem!\");
       } else {
-        alert("Błąd przy wysyłaniu PDF.");
+        alert(\"Błąd przy wysyłaniu PDF.\");
       }
     } catch (err) {
-      console.error("Błąd fetch /send-pdf", err);
-      alert("Nie udało się wysłać PDF. Sprawdź konsolę.");
+      console.error(\"Błąd fetch /send-pdf\", err);
+      alert(\"Nie udało się wysłać PDF. Sprawdź konsolę.\");
     }
   };
   reader.readAsDataURL(pdfBlob);
 });
-</script></body>
+</script>
+
+</body>
 </html>
