@@ -2,22 +2,30 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-let mailDB = path.join(__dirname, "mailDB.json");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+const nodemailer = require("nodemailer");
+require("dotenv").config();
 
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+const mailDB = path.join(__dirname, "mailDB.json"); // Tylko raz!
+
+// Funkcja zapisu statusu wysłania
 function logSentMail(name) {
   let data = [];
   if (fs.existsSync(mailDB)) {
     data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
   }
+
   const index = data.findIndex(e => e.name === name);
   if (index !== -1) data[index].sent = true;
   else data.push({ name, sent: true });
+
   fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
 }
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const nodemailer = require("nodemailer");
-require("dotenv").config();
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
