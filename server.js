@@ -26,8 +26,6 @@ function logSentMail(name) {
   fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
 }
 
-
-const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
