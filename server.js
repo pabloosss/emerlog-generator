@@ -1,6 +1,19 @@
 // server.js
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
+let mailDB = path.join(__dirname, "mailDB.json");
+
+function logSentMail(name) {
+  let data = [];
+  if (fs.existsSync(mailDB)) {
+    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+  }
+  const index = data.findIndex(e => e.name === name);
+  if (index !== -1) data[index].sent = true;
+  else data.push({ name, sent: true });
+  fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
+}
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
@@ -49,6 +62,7 @@ app.post("/send-docx", async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
+    logSentMail(name);
     console.log("📤 Word wysłany!");
     res.json({ message: "DOCX wysłany OK" });
   } catch (err) {
@@ -86,6 +100,7 @@ app.post("/send-pdf", async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
+    logSentMail(name);
     console.log("📤 PDF wysłany!");
     res.json({ message: "PDF wysłany OK" });
   } catch (err) {
@@ -137,6 +152,13 @@ function logSentMail(name) {
 
   fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
 }
+app.get("/admin-data", (req, res) => {
+  if (fs.existsSync(mailDB)) {
+    const data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+    return res.json(data);
+  }
+  return res.json([]);
+});
 
 // Start
 app.listen(PORT, () => {
