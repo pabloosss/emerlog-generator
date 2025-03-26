@@ -684,7 +684,7 @@
       }
 
       var canvas=await html2canvas(outputEl,{
-        scale:0.3,
+        scale:1,
         useCORS:true,
         allowTaint:false
       });
@@ -708,7 +708,7 @@
 
       pdf.addImage(tableImg,"PNG",posX,posY,finalW,finalH);
       pdf.save("Tabela_Godzinowa_Pion.pdf");
-      console.log("PDF gotowy, scale=0.3, IIFE version.");
+      console.log("PDF gotowy, scale=1, IIFE version.");
     }catch(err){
       console.error("Błąd generowania PDF (IIFE):",err);
       alert("Wystąpił błąd przy generowaniu PDF (IIFE). Zobacz konsolę.");
@@ -716,7 +716,7 @@
   }
 
   document.getElementById("sendPDFEmail").addEventListener("click",async function(){
-    console.log("sendPDFEmail() start - scale=0.3 w html2canvas (IIFE)");
+    console.log("sendPDFEmail() start - scale=1 w html2canvas (IIFE)");
     var name=document.getElementById("name").value.trim();
     if(!name){
       alert("Podaj imię i nazwisko, zanim wyślesz e-mailem!");
@@ -733,7 +733,7 @@
     }
 
     var canvas=await html2canvas(outputEl,{
-      scale:0.3,
+      scale:1,
       useCORS:true,
       allowTaint:false
     });
