@@ -107,8 +107,6 @@
       color: #a00;
       font-weight: bold;
     }
-    /* Styl wniosku urlopowego */
-    /* usunięto cały wniosek urlopowy, tak jak życzył sobie użytkownik */
     .signatureName {
       font-family: "Arial", sans-serif;
       font-size: 24px;
@@ -177,8 +175,6 @@
         </div>
       </div>
 
-      <!-- Usunięto checkboxa i logikę wniosku urlopowego -->
-
       <div class="row">
         <div class="col-md-6 mb-3 form-group required">
           <label class="form-label" for="name">Imię i nazwisko</label>
@@ -231,9 +227,8 @@
             <input class="form-control" id="holidayPicker" type="date"/>
           </div>
           <div class="col">
-            <!-- SELECT z rodzajami, ale w JS przełączamy, by dla zlecenie widoczny był tylko L4 -->
+            <!-- SELECT z rodzajami, ale w JS przełączamy, by dla zlecenie widoczny był tylko L4, a dla praca – inne typy -->
             <select class="form-select" id="holidayTypeSelect">
-              <!-- Poniższe opcje będą dynamicznie w JS ukrywane/pokazywane w zależności od umowy -->
               <option value="Urlop wypoczynkowy">Urlop wypoczynkowy</option>
               <option value="Urlop okolicznościowy">Urlop okolicznościowy</option>
               <option value="Zwolnienie lekarskie (L4)">Zwolnienie lekarskie (L4)</option>
@@ -252,32 +247,6 @@
       <div class="mb-3 form-check" id="randomHolidaysGroup">
         <input class="form-check-input" id="randomHolidays" type="checkbox"/>
         <label class="form-check-label" for="randomHolidays">Dodaj losowo dni wolne</label>
-      </div>
-
-      <!-- Rodzaje dni urlopowych dla umowy o pracę – (możesz zostawić, jeśli potrzebujesz wewn. logiki) -->
-      <div class="mb-3" id="workLeaveTypes" style="display:none;">
-        <label class="form-label">Rodzaje dni urlopowych (dla umowy o pracę)</label>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="leaveL4">
-          <label class="form-check-label" for="leaveL4">Zwolnienie lekarskie (L4)</label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="leaveOkolicznosciowy">
-          <label class="form-check-label" for="leaveOkolicznosciowy">Urlop okolicznościowy</label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="leaveWypoczynkowy">
-          <label class="form-check-label" for="leaveWypoczynkowy">Urlop wypoczynkowy</label>
-        </div>
-      </div>
-
-      <!-- L4 dla zlecenia -->
-      <div class="mb-3" id="zlecenieL4" style="display:none;">
-        <label class="form-label">Dodatkowa opcja (tylko umowa zlecenie)</label>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="zlecenieL4Check">
-          <label class="form-check-label" for="zlecenieL4Check">Zwolnienie lekarskie (L4)</label>
-        </div>
       </div>
 
       <button class="btn btn-primary" type="submit">Generuj tabelę</button>
@@ -307,10 +276,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
-  // Mapa "pierwszych dni roboczych" zlecenia (jeśli potrzebujesz)
+  // Mapa "pierwszych dni roboczych" zlecenie
   const FIRST_WORKING_DAYS = {};
 
-  // Dane miesięczne – (jeśli chcesz ich używać w logice)
+  // Dane miesięczne – (jeśli chcesz ich używać)
   const monthlyData2025 = {
     1:  { totalHours: 168, workingDays: 21, freeDays: 10 },
     2:  { totalHours: 160, workingDays: 20, freeDays: 8 },
@@ -327,7 +296,7 @@
   };
 
   // Tablice do przechowywania dni wolnych
-  // w postaci obiektów { date: 'YYYY-MM-DD', type: '...' }
+  // format: { date: 'YYYY-MM-DD', type: '...' }
   window.customHolidays = [];
   window.randomFreeDaysAdded = [];
 
@@ -352,7 +321,7 @@
       form.classList.add("was-validated");
     });
 
-    // Obsługa przycisku "Dodaj wolne"
+    // Obsługa "Dodaj wolne"
     document.getElementById("addHoliday").addEventListener("click", () => {
       const selDate = document.getElementById("holidayPicker").value;
       const holidayType = document.getElementById("holidayTypeSelect").value;
@@ -370,9 +339,8 @@
       renderHolidays();
     });
 
-    // Wywołanie stanu początkowego (zaznaczone jest 'zlecenie' domyślnie)
+    // Stan początkowy
     onContractChange();
-
     // Min/max w holidayPicker
     document.getElementById("month").addEventListener("change", updateHolidayPickerRange);
     document.getElementById("year").addEventListener("change", updateHolidayPickerRange);
@@ -381,48 +349,30 @@
   function onContractChange() {
     const type = document.querySelector('input[name="contractType"]:checked').value;
     const randomHolidaysCheckbox = document.getElementById("randomHolidays");
-    const workLeaveTypes = document.getElementById("workLeaveTypes");
-    const zlecenieL4 = document.getElementById("zlecenieL4");
     const hoursGroup = document.getElementById("hoursGroup");
     const hoursInput = document.getElementById("hours");
-    // W zleceniu "losowe" wymuszone i mamy tylko L4 w select
     const holidayTypeSelect = document.getElementById("holidayTypeSelect");
 
     if (type === "zlecenie") {
+      // Umowa zlecenie
       hoursGroup.style.display = "block";
       hoursInput.required = true;
-
-      // Losowe dni wolne – włączone i zablokowane
+      // Losowe dni wolne zawsze zaznaczone i zablokowane
       randomHolidaysCheckbox.checked = true;
       randomHolidaysCheckbox.disabled = true;
-
-      // Ukryj rodzaje urlopowe pracy
-      workLeaveTypes.style.display = "none";
-      // Pokaż L4 dla zlecenia
-      zlecenieL4.style.display = "block";
-
-      // Zmień select (tylko "Zwolnienie lekarskie (L4)")
+      // Zmień select: tylko "Zwolnienie lekarskie (L4)"
       holidayTypeSelect.innerHTML = "";
       const opt = document.createElement("option");
       opt.value = "Zwolnienie lekarskie (L4)";
       opt.textContent = "Zwolnienie lekarskie (L4)";
       holidayTypeSelect.appendChild(opt);
-
     } else {
       // Umowa o pracę (pełny etat / 3/4)
       hoursGroup.style.display = "none";
       hoursInput.required = false;
-
-      // Losowe dni wolne – wolny wybór
       randomHolidaysCheckbox.checked = false;
       randomHolidaysCheckbox.disabled = false;
-
-      // Rodzaje urlopowe pracy
-      workLeaveTypes.style.display = "block";
-      // L4 zlecenia – ukryj
-      zlecenieL4.style.display = "none";
-
-      // Przywracamy select z urlopami
+      // Przywracamy listę opcji
       holidayTypeSelect.innerHTML = "";
       const optionsForPraca = [
         "Urlop wypoczynkowy",
@@ -480,10 +430,9 @@
     }
   }
 
-  // Spis świąt
+  // Święta stałe
   const fixedHolidays = [
-    "01-01","06-01","20-04","21-04",
-    "01-05","03-05","08-06","19-06",
+    "01-01","06-01","20-04","21-04","01-05","03-05","08-06","19-06",
     "15-08","01-11","11-11","25-12","26-12"
   ];
 
@@ -504,7 +453,6 @@
     const dow = dateObj.getDay();
     return dow===0 || dow===6;
   }
-
   function shuffleArray(arr){
     for (let i=arr.length-1;i>0;i--){
       const j = Math.floor(Math.random()*(i+1));
@@ -527,7 +475,6 @@
     let leftover = totalHours - (daysCount*MIN_HOURS_PER_DAY);
     let base = Math.floor(leftover/daysCount);
     let rem = leftover % daysCount;
-
     for (let i=0;i<daysCount;i++){
       arr[i]+=base;
     }
@@ -595,7 +542,7 @@
     let dayData = [];
     for (let d=1; d<=daysInMonth; d++){
       const dateObj = new Date(yearVal, monthVal-1, d);
-      const customHol = checkCustomHoliday(d, monthVal, yearVal); // obiekt lub null
+      const customHol = checkCustomHoliday(d, monthVal, yearVal); // { date, type } lub null
       const isWeekendDay = isWeekend(dateObj);
       const isFixedHol = isFixedHoliday(d,monthVal);
 
@@ -618,9 +565,8 @@
       });
     }
 
-    // Umowa zlecenie + losowe dni wolne
+    // Umowa zlecenie + losowe
     if (contractType==="zlecenie" && addRandom){
-      // przykładowy wzorzec wolnych: [0,1,3,1,0,0] (tydzień1=0, tydzień2=1,...)
       const freeDaysPattern = [0,1,3,1,0,0];
       let grouped = {};
       dayData.forEach(day=>{
@@ -728,7 +674,7 @@
       </tr>
     `);
 
-    // Tabela (8 kolumn, gdzie ostatnia to "Rodzaj wolnego")
+    // Tabela (8 kolumn)
     let tableHTML = `
       <h3 class="mt-4">${monthNames[monthVal-1]} ${yearVal}</h3>
       <h4>${fullName}</h4>
@@ -756,13 +702,11 @@
       </table>
     `;
 
-    // Wyświetlamy tabelę w #output
     document.getElementById("output").innerHTML = tableHTML;
     document.getElementById("exportButtons").style.display = "block";
     document.getElementById("generatePDF").onclick = downloadPDF;
   }
 
-  // Generowanie PDF (tylko jedna strona – usunięto wniosek urlopowy)
   async function downloadPDF() {
     console.log("downloadPDF triggered");
     try {
@@ -779,7 +723,7 @@
       await new Promise(resolve => { logoImg.onload = resolve; });
 
       const desiredLogoWidth = 150;
-      let desiredLogoHeight = logoImg.height * (desiredLogoWidth / logoImg.width);
+      let desiredLogoHeight = logoImg.height*(desiredLogoWidth/logoImg.width);
       if (!desiredLogoHeight || desiredLogoHeight <=0 || Number.isNaN(desiredLogoHeight)){
         desiredLogoHeight=50;
       }
@@ -810,7 +754,6 @@
       posX_table = Math.max(posX_table, margin);
       posY_table = Math.max(posY_table, margin+desiredLogoHeight+gap);
 
-      // Dodajemy zrzut tabeli
       pdf.addImage(tableImgData,"PNG",posX_table,posY_table,finalW,finalH);
 
       pdf.save("Tabela_Godzinowa_Pion.pdf");
@@ -870,6 +813,5 @@ document.getElementById("sendPDFEmail").addEventListener("click", async () => {
   reader.readAsDataURL(pdfBlob);
 });
 </script>
-
 </body>
 </html>
