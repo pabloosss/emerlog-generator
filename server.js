@@ -113,7 +113,7 @@ app.post("/send-pdf", async (req, res) => {
   }
 });
 // Plik z bazą mailową
-const mailDB = path.join(__dirname, "mailDB.json");
+
 
 // Endpoint: pobierz dane admina
 app.get("/admin-data", (req, res) => {
