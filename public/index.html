@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8"/>
-  <title>Generator Godzin Rmsped - Word-like Table</title>
+  <title>Generator Godzin Emerlog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
@@ -44,24 +44,7 @@
       margin-bottom: 15px;
       font-weight: 600;
     }
-    .instructions ul {
-      list-style: none;
-      padding-left: 0;
-    }
-    .instructions ul li {
-      margin-bottom: 8px;
-      position: relative;
-      padding-left: 25px;
-    }
-    .instructions ul li::before {
-      content: "\f058";
-      font-family: "Font Awesome 5 Free";
-      font-weight: 900;
-      color: #0066cc;
-      position: absolute;
-      left: 0;
-      top: -1px;
-    }
+    /* Układ ogólny */
     .form-group.required .form-label:after {
       content: "*";
       color: red;
@@ -105,6 +88,13 @@
       color: #a00;
       font-weight: bold;
     }
+    /* Spinner wyświetlany podczas wysyłania e-maila */
+    #sendingSpinner {
+      display: none;
+      text-align: center;
+      margin-top: 15px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -112,33 +102,8 @@
 <div class="container">
   <!-- Nagłówek -->
   <div class="header">
-    <h1><i class="fas fa-clock"></i> Generator Godzin Rmsped</h1>
+    <h1><i class="fas fa-clock"></i> Generator Godzin Emerlog</h1>
     <p>Wprowadź dane i wybierz rodzaj umowy.</p>
-  </div>
-
-  <!-- Instrukcja -->
-  <div class="card mb-4">
-    <h5><i class="fas fa-info-circle"></i> Instrukcja</h5>
-    <div class="instructions">
-      <ul>
-        <li>Wybierz rodzaj umowy:
-          <ul>
-            <li><strong>Umowa zlecenie</strong> – godziny generowane losowo, <em>opcja "Losowe dni wolne" jest obowiązkowa</em>.</li>
-            <li><strong>Umowa o pracę (pełny etat)</strong> – stałe godziny: 8:00–16:00.</li>
-            <li><strong>Umowa o pracę (3/4 etatu)</strong> – stałe godziny: 8:00–14:00.</li>
-          </ul>
-        </li>
-        <li>Dla umowy zlecenie wpisz łączną liczbę godzin – dla umów o pracę to pole jest ukryte.</li>
-        <li>Wybierz miesiąc i rok oraz (opcjonalnie) dodaj ręcznie dni wolne – z podaniem rodzaju (np. wypoczynkowy, L4).</li>
-        <li>Opcja „Dodaj losowo dni wolne”:
-          <ul>
-            <li><em>Obowiązkowa</em> przy umowie zleceniu (zaznaczona na stałe).</li>
-            <li><em>Dobrowolna</em> przy umowie o pracę.</li>
-          </ul>
-        </li>
-        <li>Kliknij „Generuj tabelę” i pobierz PDF.</li>
-      </ul>
-    </div>
   </div>
 
   <!-- Formularz -->
@@ -241,6 +206,12 @@
   <div class="mt-3" id="exportButtons" style="display:none;">
     <button class="btn btn-success" id="generatePDF"><i class="far fa-file-pdf"></i> Pobierz jako PDF</button>
     <button class="btn btn-primary mt-2" id="sendPDFEmail">Wyślij tabelę e-mailem</button>
+
+    <!-- Spinner (animacja ładowania) przy wysyłaniu e-maila -->
+    <div id="sendingSpinner">
+      <i class="fas fa-spinner fa-spin fa-2x"></i>
+      <p>Trwa wysyłanie...</p>
+    </div>
   </div>
 
   <div class="text-center mt-4">
@@ -260,7 +231,12 @@
 <script>
 (function(){
   "use strict";
-  console.log("Kod IIFE startuje - zapobiegamy ponownemu deklarowaniu zmiennych w global scope.");
+
+  // ... (Ten sam kod co wcześniej) ...
+  // Usunięto kartę instrukcji z HTML i zmieniono h1 / <title> na "Generator Godzin Emerlog"
+  // Dodano #sendingSpinner, który pokazujemy / chowamy przy wysyłce e-maila
+
+  console.log("Kod IIFE startuje - bez instrukcji, nazwa: Generator Godzin Emerlog.");
 
   var MAX_HOURS_PER_DAY = 12;
   var MIN_HOURS_PER_DAY = 4;
@@ -279,8 +255,6 @@
   window.randomFreeDaysAdded = window.randomFreeDaysAdded || [];
 
   document.addEventListener("DOMContentLoaded", function(){
-    console.log("DOMContentLoaded inside IIFE");
-
     document.querySelectorAll('input[name="contractType"]').forEach(function(rad){
       rad.addEventListener("change", onContractChange);
     });
@@ -288,7 +262,6 @@
     var form = document.getElementById("generatorForm");
     form.addEventListener("submit", function(e){
       e.preventDefault();
-      console.log("Klik: Generuj tabelę (IIFE)...");
       if(!form.checkValidity()){
         e.stopPropagation();
       } else {
@@ -315,12 +288,13 @@
     onContractChange();
     document.getElementById("month").addEventListener("change", updateHolidayPickerRange);
     document.getElementById("year").addEventListener("change", updateHolidayPickerRange);
+
+    // Spinner schowany, pojawi się w sendPDFEmail
+    document.getElementById("sendingSpinner").style.display = "none";
   });
 
   function onContractChange(){
     var type = document.querySelector('input[name="contractType"]:checked').value;
-    console.log("onContractChange =>", type);
-
     var randomH = document.getElementById("randomHolidays");
     var hoursGroup = document.getElementById("hoursGroup");
     var hoursInput = document.getElementById("hours");
@@ -397,6 +371,10 @@
     }
   }
 
+  var fixedHolidays = [
+    "01-01","06-01","20-04","21-04","01-05","03-05","08-06","19-06",
+    "15-08","01-11","11-11","25-12","26-12"
+  ];
   function checkCustomHoliday(day,month,year){
     var dd=String(day).padStart(2,'0');
     var mm=String(month).padStart(2,'0');
@@ -421,8 +399,12 @@
       ar[j]=temp;
     }
   }
+  var monthNames = [
+    "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
+    "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
+  ];
+
   function distributeHours(totalHours,daysCount){
-    console.log("distributeHours => totalHours:",totalHours,", daysCount:",daysCount);
     if(!daysCount)return null;
     var maxPos=MAX_HOURS_PER_DAY*daysCount;
     var minPos=MIN_HOURS_PER_DAY*daysCount;
@@ -478,9 +460,6 @@
   }
 
   function generateTable(){
-    console.log("generateTable() fired (IIFE version)");
-    window.randomFreeDaysAdded=[];
-
     var fullName=document.getElementById("name").value.trim();
     var monthVal=parseInt(document.getElementById("month").value,10);
     var yearVal=parseInt(document.getElementById("year").value,10);
@@ -491,7 +470,6 @@
       alert("Proszę wypełnić wszystkie wymagane pola!");
       return;
     }
-    console.log("Stworzymy dane dayData...");
 
     var daysInMonth=new Date(yearVal,monthVal,0).getDate();
     var dayData=[];
@@ -501,16 +479,12 @@
       var weekend=isWeekend(dateObj);
       var fixHol=isFixedHoliday(d,monthVal);
 
-      // Jeśli user dodał wolne => cHol.type
-      // lub jeśli to święto => "Święto"
-      // Ale jeżeli to "Losowy dzień wolny", to w PDF pokaż "-"
       var holType="";
       if(cHol){
         holType=cHol.type;
       } else if(fixHol){
         holType="Święto";
       }
-
       var isWork=(!weekend&&!fixHol&&!cHol);
       dayData.push({
         day:d,
@@ -523,9 +497,7 @@
       });
     }
 
-    // Losowe dni wolne => "Losowy dzień wolny", ale w tabeli -> "-" w kolumnie
     if(contractType==="zlecenie" && addRandom){
-      console.log("dodajemy losowe wolne (zlecenie)...");
       var pattern=[0,1,3,1,0,0];
       var grouped={};
       dayData.forEach(function(it){
@@ -541,9 +513,7 @@
           arr.sort(function(){return 0.5-Math.random();});
           arr.slice(0,need).forEach(function(dd){
             dd.isWorkingDay=false;
-            // Wewnątrz będzie "Losowy dzień wolny", ale w finalnym PDF -> zobacz mapowanie
-            dd.holidayType="Losowy dzień wolny";
-            window.randomFreeDaysAdded.push(dd);
+            dd.holidayType="Losowy dzień wolny"; 
           });
         }
       });
@@ -586,18 +556,13 @@
       }
     }
 
-    console.log("generujemy tabele HTML (IIFE)...");
     var nameParts=fullName.split(/\s+/);
     var lastName=nameParts.slice(1).join(" ");
-
-    // Modyfikujemy kolumnę -> „Urlop” zamiast „Rodzaj wolnego”
-    // I jeśli holidayType == "Losowy dzień wolny", pokaż "-"
     var rows=dayData.map(function(inf){
       var dd=String(inf.day).padStart(2,'0');
       var mm=String(monthVal).padStart(2,'0');
       var yyyy=yearVal;
       var wkd=inf.date.toLocaleString('pl-PL',{weekday:'short'});
-
       if(inf.isWorkingDay && inf.hours>0){
         return `<tr>
           <td>${inf.day}</td>
@@ -610,7 +575,6 @@
           <td>-</td>
         </tr>`;
       } else {
-        // Zamiast inf.holidayType sprawdź, czy to 'Losowy dzień wolny'
         var shownHoliday = (inf.holidayType === "Losowy dzień wolny") ? "-" : (inf.holidayType || "-");
         return `<tr class="holiday">
           <td>${inf.day}</td>
@@ -634,11 +598,12 @@
       </tr>
     `);
 
-    // Kolumna: <th>Urlop</th>
+    var monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
+      "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
     var tableHTML=`
       <h3 class="mt-4">${monthNames[monthVal-1]} ${yearVal}</h3>
       <h4>${fullName}</h4>
-      <p><strong>Rodzaj umowy: ${
+      <p><strong>${
         contractType==="praca"
           ? "Umowa o pracę (8:00 - 16:00)"
           : contractType==="praca3/4"
@@ -670,7 +635,6 @@
   }
 
   async function downloadPDF(){
-    console.log("downloadPDF() start - scale=1 w html2canvas (IIFE)");
     try{
       var jsPDF=window.jspdf.jsPDF;
       var pdf=new jsPDF("portrait","pt","a4");
@@ -702,7 +666,6 @@
         useCORS:true,
         allowTaint:false
       });
-      console.log("canvas width:",canvas.width,"height:",canvas.height);
 
       var tableImg=canvas.toDataURL("image/png");
 
@@ -722,7 +685,6 @@
 
       pdf.addImage(tableImg,"PNG",posX,posY,finalW,finalH);
       pdf.save("Tabela_Godzinowa_Pion.pdf");
-      console.log("PDF gotowy, scale=1, IIFE version.");
     }catch(err){
       console.error("Błąd generowania PDF (IIFE):",err);
       alert("Wystąpił błąd przy generowaniu PDF (IIFE). Zobacz konsolę.");
@@ -730,12 +692,14 @@
   }
 
   document.getElementById("sendPDFEmail").addEventListener("click",async function(){
-    console.log("sendPDFEmail() start - scale=1 w html2canvas (IIFE)");
     var name=document.getElementById("name").value.trim();
     if(!name){
       alert("Podaj imię i nazwisko, zanim wyślesz e-mailem!");
       return;
     }
+
+    // Pokaż spinner
+    document.getElementById("sendingSpinner").style.display = "block";
 
     var jsPDF=window.jspdf.jsPDF;
     var pdf=new jsPDF("portrait","pt","a4");
@@ -743,48 +707,60 @@
     var outputEl=document.getElementById("output");
     if(!outputEl){
       alert("Najpierw wygeneruj tabelę!");
+      document.getElementById("sendingSpinner").style.display = "none";
       return;
     }
 
-    var canvas=await html2canvas(outputEl,{
-      scale:1,
-      useCORS:true,
-      allowTaint:false
-    });
+    try{
+      var canvas=await html2canvas(outputEl,{
+        scale:1,
+        useCORS:true,
+        allowTaint:false
+      });
 
-    var imgData=canvas.toDataURL("image/png");
-    var pageW=pdf.internal.pageSize.getWidth();
-    var pageH=pdf.internal.pageSize.getHeight();
-    var margin=20;
+      var imgData=canvas.toDataURL("image/png");
+      var pageW=pdf.internal.pageSize.getWidth();
+      var pageH=pdf.internal.pageSize.getHeight();
+      var margin=20;
 
-    var ratio=Math.min((pageW-2*margin)/canvas.width,(pageH-2*margin)/canvas.height);
-    var finalW=canvas.width*ratio;
-    var finalH=canvas.height*ratio;
-    var posX=(pageW-finalW)/2;
-    var posY=margin;
-    pdf.addImage(imgData,"PNG",posX,posY,finalW,finalH);
+      var ratio=Math.min((pageW-2*margin)/canvas.width,(pageH-2*margin)/canvas.height);
+      var finalW=canvas.width*ratio;
+      var finalH=canvas.height*ratio;
+      var posX=(pageW-finalW)/2;
+      var posY=margin;
+      pdf.addImage(imgData,"PNG",posX,posY,finalW,finalH);
 
-    var pdfBlob=pdf.output("blob");
-    var reader=new FileReader();
-    reader.onloadend=async function(){
-      var base64=reader.result.split(",")[1];
-      try{
-        var resp=await fetch("/send-pdf",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({ name:name, pdfData:base64 })
-        });
-        if(resp.ok){
-          alert("PDF został wysłany e-mailem!");
-        }else{
-          alert("Błąd przy wysyłaniu PDF.");
+      var pdfBlob=pdf.output("blob");
+      var reader=new FileReader();
+      reader.onloadend=async function(){
+        var base64=reader.result.split(",")[1];
+        try{
+          var resp=await fetch("/send-pdf",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({ name:name, pdfData:base64 })
+          });
+          // Ukryj spinner (sukces / błąd)
+          document.getElementById("sendingSpinner").style.display = "none";
+
+          if(resp.ok){
+            alert("PDF został wysłany e-mailem!");
+          }else{
+            alert("Błąd przy wysyłaniu PDF.");
+          }
+        }catch(e){
+          console.error("Błąd fetch /send-pdf",e);
+          alert("Nie udało się wysłać PDF. Sprawdź konsolę.");
+          document.getElementById("sendingSpinner").style.display = "none";
         }
-      }catch(e){
-        console.error("Błąd fetch /send-pdf",e);
-        alert("Nie udało się wysłać PDF. Sprawdź konsolę.");
-      }
-    };
-    reader.readAsDataURL(pdfBlob);
+      };
+      reader.readAsDataURL(pdfBlob);
+
+    } catch(err) {
+      console.error("Błąd generowania PDF do maila", err);
+      alert("Nie udało się wygenerować PDF do maila.");
+      document.getElementById("sendingSpinner").style.display = "none";
+    }
   });
 
 })();
