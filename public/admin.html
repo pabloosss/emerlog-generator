@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
@@ -141,6 +141,7 @@
           </div>
           <div class="d-flex justify-content-end mb-3">
             <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
+            <button id="deleteAllBtn" class="btn btn-danger ms-2">Usuń wszystkich</button>
           </div>
           <!-- Tabela użytkowników -->
           <table class="table table-bordered" id="usersTable">
@@ -160,6 +161,7 @@
         document.getElementById("statusFilter").addEventListener("change", renderUsersTable);
         document.getElementById("sortSelect").addEventListener("change", renderUsersTable);
         document.getElementById("resetBtn").addEventListener("click", onResetStatus);
+        document.getElementById("deleteAllBtn").addEventListener("click", onDeleteAllUsers);
         renderUsersTable();
       }
 
@@ -204,16 +206,30 @@
             alert("Użytkownik usunięty!");
             loadAdminPanel();
           } else {
-            // Jeśli endpoint nie działa, usuń lokalnie
-            allUsers = allUsers.filter(u => u.id !== userId);
-            alert("Użytkownik usunięty lokalnie!");
-            renderUsersTable();
+            alert("Błąd przy usuwaniu użytkownika. Sprawdź działanie endpointu /remove-user.");
           }
         } catch(err) {
           console.error(err);
-          allUsers = allUsers.filter(u => u.id !== userId);
-          alert("Użytkownik usunięty lokalnie (błąd fetch).");
-          renderUsersTable();
+          alert("Błąd przy komunikacji z serwerem.");
+        }
+      }
+
+      async function onDeleteAllUsers(){
+        if(!confirm("Na pewno usunąć wszystkich użytkowników? Ta operacja jest nieodwracalna!")) return;
+        try {
+          const res = await fetch("/remove-all-users", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"}
+          });
+          if(res.ok){
+            alert("Wszyscy użytkownicy zostali usunięci!");
+            loadAdminPanel();
+          } else {
+            alert("Błąd przy usuwaniu wszystkich użytkowników. Sprawdź endpoint /remove-all-users.");
+          }
+        } catch(err) {
+          console.error(err);
+          alert("Błąd przy komunikacji z serwerem.");
         }
       }
 
