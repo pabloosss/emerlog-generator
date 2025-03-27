@@ -59,7 +59,7 @@
         window.location.href = "/";
       });
 
-      // Obsługa przycisku logowania w modalu
+      // Obsługa logowania admina
       document.getElementById("loginBtn").addEventListener("click", async function(){
         const login = document.getElementById("adminLogin").value.trim();
         const pass  = document.getElementById("adminPass").value.trim();
@@ -74,10 +74,13 @@
         }
       });
 
-      // Pobieramy dane z /admin-data i renderujemy panel
+      // Funkcja pobierająca dane z /admin-data
       async function loadAdminPanel(){
         try {
           const res = await fetch("/admin-data");
+          if(!res.ok) {
+            throw new Error("Nieprawidłowa odpowiedź serwera");
+          }
           const data = await res.json();
           allUsers = data;
           renderAdminPanel();
@@ -187,7 +190,6 @@
         if(!confirm("Na pewno zresetować statusy (ustawić jako 'Nie wysłano')?")) return;
         allUsers.forEach(u => u.sent = false);
         alert("Statusy zresetowane!");
-        // Aktualizujemy widok aktualnie aktywnej zakładki
         const activeTable = document.querySelector("#adminContent table");
         if(activeTable && activeTable.id === "usersTable") renderUsersTable();
         else if(activeTable && activeTable.id === "logsTable") renderLogsTable();
@@ -264,7 +266,7 @@
         });
       }
 
-      // Upewnij się, że funkcja onRemoveUser jest dostępna globalnie (dla przycisku "Usuń")
+      // Upewnij się, że funkcja onRemoveUser jest dostępna globalnie
       window.onRemoveUser = onRemoveUser;
     });
   </script>
