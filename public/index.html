@@ -40,6 +40,7 @@
       padding: 20px;
       margin-bottom: 30px;
     }
+    /* Układ ogólny */
     .form-group.required .form-label:after {
       content: "*";
       color: red;
@@ -78,8 +79,10 @@
       background-color: #e0e0e0;
       font-weight: bold;
     }
-    /* Wyróżnienie dni wolnych (tylko pogrubienie, bez koloru) */
+    /* Dni wolne - kolor tła #ffcccc, tekst #a00, pogrubione */
     .final-table .holiday td {
+      background-color: #ffcccc;
+      color: #a00;
       font-weight: bold;
     }
     /* Spinner wyświetlany podczas wysyłania e-maila */
@@ -556,6 +559,7 @@
           <td>-</td>
         </tr>`;
       } else {
+        // Kolorujemy na czerwono (patrz .holiday w CSS)
         var shownHoliday = (inf.holidayType === "Losowy dzień wolny") ? "-" : (inf.holidayType || "-");
         return `<tr class="holiday">
           <td>${inf.day}</td>
@@ -617,7 +621,6 @@
     try{
       var jsPDF=window.jspdf.jsPDF;
       var pdf=new jsPDF("portrait","pt","a4");
-
       var pageWidth=pdf.internal.pageSize.getWidth();
       var pageHeight=pdf.internal.pageSize.getHeight();
 
@@ -632,9 +635,10 @@
       if(!desiredLogoHeight || desiredLogoHeight<=0 || isNaN(desiredLogoHeight)){
         desiredLogoHeight=50;
       }
-      // PDF wypełnia cały obszar (0,0 do pageWidth,pageHeight)
+      // Dodajemy logo w lewym górnym rogu
       pdf.addImage(logoImg,"PNG",20,20,desiredLogoWidth,desiredLogoHeight);
 
+      // Zrzut tabeli
       var outputEl=document.getElementById("output");
       if(!outputEl){
         alert("Brak elementu #output do wygenerowania PDF.");
@@ -646,10 +650,17 @@
         useCORS:true,
         allowTaint:false
       });
+      // Tworzymy obraz i zachowujemy proporcje
+      var tableImg=canvas.toDataURL("image/png");
 
-      // Obraz wypełnia stronę
-      pdf.addImage(canvas.toDataURL("image/png"),"PNG",0,0,pageWidth,pageHeight);
+      var ratio=Math.min((pageWidth / canvas.width), (pageHeight / canvas.height));
+      var finalW=canvas.width*ratio;
+      var finalH=canvas.height*ratio;
 
+      var posX=(pageWidth-finalW)/2;
+      var posY=(pageHeight-finalH)/2;
+
+      pdf.addImage(tableImg,"PNG",posX,posY,finalW,finalH);
       pdf.save("Tabela_Godzinowa_Pion.pdf");
     }catch(err){
       console.error("Błąd generowania PDF (IIFE):",err);
@@ -663,7 +674,6 @@
       alert("Podaj imię i nazwisko, zanim wyślesz e-mailem!");
       return;
     }
-
     document.getElementById("sendingSpinner").style.display = "block";
 
     var jsPDF=window.jspdf.jsPDF;
@@ -684,8 +694,29 @@
         useCORS:true,
         allowTaint:false
       });
+      var tableImg=canvas.toDataURL("image/png");
 
-      pdf.addImage(canvas.toDataURL("image/png"),"PNG",0,0,pageWidth,pageHeight);
+      var ratio=Math.min((pageWidth / canvas.width), (pageHeight / canvas.height));
+      var finalW=canvas.width*ratio;
+      var finalH=canvas.height*ratio;
+
+      var posX=(pageWidth-finalW)/2;
+      var posY=(pageHeight-finalH)/2;
+
+      // Logo w lewym górnym rogu
+      var logoImg=new Image();
+      logoImg.crossOrigin="Anonymous";
+      logoImg.src="https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
+      await new Promise(function(resolve){ logoImg.onload=resolve; });
+
+      var desiredLogoWidth=150;
+      var desiredLogoHeight=logoImg.height*(desiredLogoWidth/logoImg.width);
+      if(!desiredLogoHeight||desiredLogoHeight<=0||isNaN(desiredLogoHeight)){
+        desiredLogoHeight=50;
+      }
+
+      pdf.addImage(logoImg,"PNG",20,20,desiredLogoWidth,desiredLogoHeight);
+      pdf.addImage(tableImg,"PNG",posX,posY,finalW,finalH);
 
       var pdfBlob=pdf.output("blob");
       var reader=new FileReader();
