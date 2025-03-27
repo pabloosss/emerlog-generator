@@ -110,7 +110,7 @@
       function renderUsersPanel(){
         const html = `
           <h3 class="mb-4">Panel Użytkowników</h3>
-          <!-- Formularz dodawania nowego użytkownika (dodaje tylko do logów) -->
+          <!-- Formularz dodawania nowego użytkownika (dodaje do logów, czyli status "Wysłano") -->
           <form id="addUserForm" class="mb-4">
             <div class="row g-2">
               <div class="col-md-8">
@@ -127,10 +127,11 @@
               <input type="text" id="searchInput" class="form-control" placeholder="Szukaj po imieniu">
             </div>
             <div class="col-md-4">
+              <!-- Ustawiamy domyślnie wybrany filtr na "Nie wysłano" -->
               <select id="statusFilter" class="form-select">
-                <option value="all">Wszystkie</option>
+                <option value="unsent" selected>Nie wysłano</option>
                 <option value="sent">Wysłano</option>
-                <option value="unsent">Nie wysłano</option>
+                <option value="all">Wszystkie</option>
               </select>
             </div>
             <div class="col-md-4">
@@ -144,7 +145,7 @@
             <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
             <button id="deleteAllBtn" class="btn btn-danger ms-2">Usuń wszystkich</button>
           </div>
-          <!-- Tabela użytkowników – wyświetlamy tylko tych, którzy nie wysłali maila -->
+          <!-- Tabela użytkowników – domyślnie wyświetlamy tylko tych z sent === false -->
           <table class="table table-bordered" id="usersTable">
             <thead class="table-light">
               <tr>
@@ -184,7 +185,7 @@
         renderLogsTable();
       }
 
-      // Dodawanie użytkownika – przy wysłaniu formularza wysyłamy manual: true
+      // Dodawanie użytkownika – przy wysłaniu formularza wysyłamy parametr manual: true
       async function onAddUser(e){
         e.preventDefault();
         const name = document.getElementById("newUserName").value.trim();
@@ -258,7 +259,7 @@
         }
       }
 
-      // Renderowanie tabeli użytkowników z filtrami i sortowaniem – wyświetlamy tylko osoby z sent === false
+      // Renderowanie tabeli użytkowników z filtrami i sortowaniem – domyślnie wyświetlamy tylko użytkowników z sent === false
       function renderUsersTable(){
         let filtered = [...allUsers];
         const searchValue = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -272,6 +273,8 @@
           filtered = filtered.filter(u => u.sent);
         } else if(statusValue === "unsent") {
           filtered = filtered.filter(u => !u.sent);
+        } else if(statusValue === "all"){
+          // pozostawiamy bez filtrowania
         }
         if(sortValue === "nameAsc") {
           filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
