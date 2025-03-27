@@ -24,6 +24,7 @@
     table.table {
       margin-top: 20px;
     }
+    /* Możesz dodać dodatkowe style według potrzeb */
   </style>
 </head>
 <body>
@@ -35,7 +36,6 @@
       <!-- Przycisk powrotu na stronę główną -->
       <button id="goHomeBtn" class="btn btn-secondary mt-3">Powrót do strony głównej</button>
     </div>
-
     <!-- Miejsce na dynamiczny kod (formularze, tabele, itp.) -->
     <div id="output" class="mt-5"></div>
   </div>
@@ -58,221 +58,210 @@
   </div>
 
   <script>
-    // Globalna zmienna – lista użytkowników
-    let allUsers = []; // dane pobierane z /admin-data
+    document.addEventListener("DOMContentLoaded", function(){
+      // Globalna zmienna – lista użytkowników
+      let allUsers = []; // dane pobierane z /admin-data
 
-    // Obsługa przycisków
-    document.getElementById("adminPanelBtn").addEventListener("click", () => {
-      const modal = new bootstrap.Modal(document.getElementById("adminModal"));
-      modal.show();
-    });
+      // Obsługa przycisków logowania i powrotu
+      document.getElementById("adminPanelBtn").addEventListener("click", function(){
+        const modal = new bootstrap.Modal(document.getElementById("adminModal"));
+        modal.show();
+      });
+      document.getElementById("goHomeBtn").addEventListener("click", function(){
+        window.location.href = "/";
+      });
 
-    document.getElementById("goHomeBtn").addEventListener("click", () => {
-      window.location.href = "/";
-    });
+      // Obsługa przycisku logowania w modalu
+      document.getElementById("loginBtn").addEventListener("click", async function(){
+        const login = document.getElementById("adminLogin").value.trim();
+        const pass  = document.getElementById("adminPass").value.trim();
+        if(login === "ewa" && pass === "admin"){
+          alert("Zalogowano jako admin");
+          // Ukrywamy modal – korzystamy z instancji Bootstrapa
+          const adminModalEl = document.getElementById("adminModal");
+          const modal = bootstrap.Modal.getInstance(adminModalEl);
+          modal.hide();
+          loadAdminPanel();
+        } else {
+          alert("Nieprawidłowy login lub hasło");
+        }
+      });
 
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      const login = document.getElementById("adminLogin").value.trim();
-      const pass  = document.getElementById("adminPass").value.trim();
-
-      if (login === "ewa" && pass === "admin") {
-        alert("Zalogowano jako admin");
-        // Ukrywamy modal:
-        document.getElementById("adminModal").classList.remove("show");
-        document.querySelector(".modal-backdrop")?.remove();
-
-        loadAdminPanel();
-      } else {
-        alert("Nieprawidłowy login lub hasło");
+      // Pobieramy dane z /admin-data i renderujemy panel
+      async function loadAdminPanel(){
+        try {
+          const res = await fetch("/admin-data");
+          const data = await res.json();
+          allUsers = data;
+          renderAdminPanel();
+        } catch(err) {
+          alert("Błąd przy pobieraniu danych (/admin-data).");
+          console.error(err);
+        }
       }
-    });
 
-    // Funkcja do pobierania danych z serwera i renderowania panelu
-    async function loadAdminPanel() {
-      try {
-        const res = await fetch("/admin-data");
-        const data = await res.json();
-        allUsers = data;
-        renderAdminPanel();
-      } catch (err) {
-        alert("Błąd przy pobieraniu danych (/admin-data).");
-        console.error(err);
-      }
-    }
-
-    function renderAdminPanel() {
-      let html = `
-        <h3 class="mb-4">Lista użytkowników</h3>
-        <!-- Formularz dodawania użytkownika -->
-        <form id="addUserForm" class="mb-4">
-          <div class="row g-2">
-            <div class="col-md-8">
-              <input type="text" id="newUserName" class="form-control" placeholder="Imię i nazwisko" required>
+      // Renderowanie panelu administratora
+      function renderAdminPanel(){
+        const html = `
+          <h3 class="mb-4">Lista użytkowników</h3>
+          <!-- Formularz dodawania nowego użytkownika -->
+          <form id="addUserForm" class="mb-4">
+            <div class="row g-2">
+              <div class="col-md-8">
+                <input type="text" id="newUserName" class="form-control" placeholder="Imię i nazwisko" required>
+              </div>
+              <div class="col-md-4">
+                <button type="submit" class="btn btn-success w-100">Dodaj użytkownika</button>
+              </div>
+            </div>
+          </form>
+          <!-- Sekcja filtrów, wyszukiwania i sortowania -->
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="searchInput" class="form-label">Szukaj:</label>
+              <input type="text" id="searchInput" class="form-control" placeholder="Wpisz fragment imienia/nazwiska">
             </div>
             <div class="col-md-4">
-              <button type="submit" class="btn btn-success w-100">Dodaj użytkownika</button>
+              <label for="statusFilter" class="form-label">Filtr statusu:</label>
+              <select id="statusFilter" class="form-select">
+                <option value="all">Wszystko</option>
+                <option value="sent">Wysłano</option>
+                <option value="unsent">Nie wysłano</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="sortSelect" class="form-label">Sortowanie:</label>
+              <select id="sortSelect" class="form-select">
+                <option value="nameAsc">Nazwisko (A-Z)</option>
+                <option value="nameDesc">Nazwisko (Z-A)</option>
+                <option value="statusAsc">Status (Wysłano → Nie wysłano)</option>
+                <option value="statusDesc">Status (Nie wysłano → Wysłano)</option>
+              </select>
             </div>
           </div>
-        </form>
-        <!-- Sekcja filtrów, wyszukiwania i sortowania -->
-        <div class="row mb-3">
-          <div class="col-md-4">
-            <label for="searchInput" class="form-label">Szukaj:</label>
-            <input type="text" id="searchInput" class="form-control" placeholder="Wpisz fragment imienia/nazwiska">
+          <div class="d-flex justify-content-end mb-3">
+            <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
           </div>
-          <div class="col-md-4">
-            <label for="statusFilter" class="form-label">Filtr statusu:</label>
-            <select id="statusFilter" class="form-select">
-              <option value="all">Wszystko</option>
-              <option value="sent">Wysłano</option>
-              <option value="unsent">Nie wysłano</option>
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label for="sortSelect" class="form-label">Sortowanie:</label>
-            <select id="sortSelect" class="form-select">
-              <option value="nameAsc">Nazwisko (A-Z)</option>
-              <option value="nameDesc">Nazwisko (Z-A)</option>
-              <option value="statusAsc">Status (Wysłano → Nie wysłano)</option>
-              <option value="statusDesc">Status (Nie wysłano → Wysłano)</option>
-            </select>
-          </div>
-        </div>
-        <div class="d-flex justify-content-end mb-3">
-          <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
-        </div>
-        <!-- Tabela użytkowników -->
-        <table class="table table-bordered" id="usersTable">
-          <thead class="table-light">
-            <tr>
-              <th>Imię i nazwisko</th>
-              <th>Status</th>
-              <th>Akcje</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      `;
-      document.getElementById("output").innerHTML = html;
-
-      // Obsługa dodawania użytkownika
-      document.getElementById("addUserForm").addEventListener("submit", onAddUser);
-      // Obsługa wyszukiwania
-      document.getElementById("searchInput").addEventListener("input", renderUsersTable);
-      // Obsługa filtrów i sortowania
-      document.getElementById("statusFilter").addEventListener("change", renderUsersTable);
-      document.getElementById("sortSelect").addEventListener("change", renderUsersTable);
-      // Obsługa resetu statusów
-      document.getElementById("resetBtn").addEventListener("click", onResetStatus);
-
-      renderUsersTable();
-    }
-
-    async function onAddUser(e) {
-      e.preventDefault();
-      const name = document.getElementById("newUserName").value.trim();
-      if (!name) return alert("Podaj imię i nazwisko!");
-      try {
-        const res = await fetch("/add-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name })
-        });
-        if (res.ok) {
-          alert("Użytkownik dodany!");
-          loadAdminPanel();
-        } else {
-          alert("Błąd przy dodawaniu użytkownika.");
-        }
-      } catch (err) {
-        alert("Błąd fetch /add-user");
-        console.error(err);
-      }
-    }
-
-    // Reset statusów lokalnie – zmiana property sent na false
-    async function onResetStatus() {
-      if (!confirm("Na pewno zresetować statusy (ustawić jako 'Nie wysłano')?")) return;
-      // Jeśli endpoint reset-status nie istnieje, resetujemy lokalnie:
-      allUsers.forEach(u => u.sent = false);
-      alert("Statusy zresetowane lokalnie!");
-      renderUsersTable();
-    }
-
-    // Usuwanie użytkownika – próba wywołania endpointu, w razie błędu usuwamy lokalnie
-    async function onRemoveUser(userId) {
-      if (!confirm("Na pewno usunąć tego użytkownika?")) return;
-      try {
-        const res = await fetch("/remove-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: userId })
-        });
-        if (res.ok) {
-          alert("Użytkownik usunięty!");
-          loadAdminPanel();
-        } else {
-          // Jeśli endpoint zwraca błąd, usuń lokalnie
-          allUsers = allUsers.filter(u => u.id !== userId);
-          alert("Użytkownik usunięty lokalnie!");
-          renderUsersTable();
-        }
-      } catch (err) {
-        console.error(err);
-        // W przypadku błędu usuwamy lokalnie
-        allUsers = allUsers.filter(u => u.id !== userId);
-        alert("Użytkownik usunięty lokalnie (błąd fetch).");
+          <!-- Tabela użytkowników -->
+          <table class="table table-bordered" id="usersTable">
+            <thead class="table-light">
+              <tr>
+                <th>Imię i nazwisko</th>
+                <th>Status</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        `;
+        document.getElementById("output").innerHTML = html;
+        document.getElementById("addUserForm").addEventListener("submit", onAddUser);
+        document.getElementById("searchInput").addEventListener("input", renderUsersTable);
+        document.getElementById("statusFilter").addEventListener("change", renderUsersTable);
+        document.getElementById("sortSelect").addEventListener("change", renderUsersTable);
+        document.getElementById("resetBtn").addEventListener("click", onResetStatus);
         renderUsersTable();
       }
-    }
 
-    function renderUsersTable() {
-      const filterVal = document.getElementById("statusFilter").value;
-      const sortVal = document.getElementById("sortSelect").value;
-      const searchVal = document.getElementById("searchInput").value.trim().toLowerCase();
+      async function onAddUser(e){
+        e.preventDefault();
+        const name = document.getElementById("newUserName").value.trim();
+        if (!name) return alert("Podaj imię i nazwisko!");
+        try {
+          const res = await fetch("/add-user", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name })
+          });
+          if (res.ok) {
+            alert("Użytkownik dodany!");
+            loadAdminPanel();
+          } else {
+            alert("Błąd przy dodawaniu użytkownika.");
+          }
+        } catch(err) {
+          alert("Błąd fetch /add-user");
+          console.error(err);
+        }
+      }
 
-      let filtered = [...allUsers];
-      if (searchVal) {
-        filtered = filtered.filter(u => u.name.toLowerCase().includes(searchVal));
+      async function onResetStatus(){
+        if(!confirm("Na pewno zresetować statusy (ustawić jako 'Nie wysłano')?")) return;
+        allUsers.forEach(u => u.sent = false);
+        alert("Statusy zresetowane!");
+        renderUsersTable();
       }
-      if (filterVal === "sent") {
-        filtered = filtered.filter(u => u.sent);
-      } else if (filterVal === "unsent") {
-        filtered = filtered.filter(u => !u.sent);
+
+      async function onRemoveUser(userId){
+        if(!confirm("Na pewno usunąć tego użytkownika?")) return;
+        try {
+          const res = await fetch("/remove-user", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ id: userId })
+          });
+          if(res.ok){
+            alert("Użytkownik usunięty!");
+            loadAdminPanel();
+          } else {
+            // Jeśli endpoint nie działa, usuń lokalnie
+            allUsers = allUsers.filter(u => u.id !== userId);
+            alert("Użytkownik usunięty lokalnie!");
+            renderUsersTable();
+          }
+        } catch(err) {
+          console.error(err);
+          allUsers = allUsers.filter(u => u.id !== userId);
+          alert("Użytkownik usunięty lokalnie (błąd fetch).");
+          renderUsersTable();
+        }
       }
-      if (sortVal === "nameAsc") {
-        filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
-      } else if (sortVal === "nameDesc") {
-        filtered.sort((a, b) => b.name.localeCompare(a.name, "pl"));
-      } else if (sortVal === "statusAsc") {
-        filtered.sort((a, b) => {
-          if (a.sent === b.sent) return 0;
-          return a.sent ? -1 : 1;
+
+      function renderUsersTable(){
+        const filterVal = document.getElementById("statusFilter").value;
+        const sortVal   = document.getElementById("sortSelect").value;
+        const searchVal = document.getElementById("searchInput").value.trim().toLowerCase();
+
+        let filtered = [...allUsers];
+        if(searchVal){
+          filtered = filtered.filter(u => u.name.toLowerCase().includes(searchVal));
+        }
+        if(filterVal === "sent"){
+          filtered = filtered.filter(u => u.sent);
+        } else if(filterVal === "unsent"){
+          filtered = filtered.filter(u => !u.sent);
+        }
+        if(sortVal === "nameAsc"){
+          filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
+        } else if(sortVal === "nameDesc"){
+          filtered.sort((a, b) => b.name.localeCompare(a.name, "pl"));
+        } else if(sortVal === "statusAsc"){
+          filtered.sort((a, b) => {
+            if(a.sent === b.sent) return 0;
+            return a.sent ? -1 : 1;
+          });
+        } else if(sortVal === "statusDesc"){
+          filtered.sort((a, b) => {
+            if(a.sent === b.sent) return 0;
+            return a.sent ? 1 : -1;
+          });
+        }
+
+        const tbody = document.querySelector("#usersTable tbody");
+        tbody.innerHTML = "";
+        filtered.forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.name}</td>
+            <td>${row.sent ? "Wysłano" : "Nie wysłano"}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="onRemoveUser('${row.id}')">Usuń</button></td>
+          `;
+          tbody.appendChild(tr);
         });
-      } else if (sortVal === "statusDesc") {
-        filtered.sort((a, b) => {
-          if (a.sent === b.sent) return 0;
-          return a.sent ? 1 : -1;
-        });
       }
-
-      const tbody = document.querySelector("#usersTable tbody");
-      tbody.innerHTML = "";
-      filtered.forEach(row => {
-        // Dodajemy przycisk usuwania z przekazywaniem id użytkownika
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${row.name}</td>
-          <td>${row.sent ? "Wysłano" : "Nie wysłano"}</td>
-          <td><button class="btn btn-danger btn-sm" onclick="onRemoveUser('${row.id}')">Usuń</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // Upewnij się, że funkcja onRemoveUser jest dostępna globalnie
-    window.onRemoveUser = onRemoveUser;
-  })();
-</script>
+      // Upewnij się, że onRemoveUser jest dostępna globalnie
+      window.onRemoveUser = onRemoveUser;
+    });
+  </script>
 </body>
 </html>
