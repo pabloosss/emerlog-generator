@@ -47,7 +47,7 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function(){
-      // Globalna zmienna – lista użytkowników
+      // Globalna zmienna – lista użytkowników (wszystkie dane)
       let allUsers = []; // pobierane z /admin-data
 
       // Obsługa przycisków logowania i powrotu
@@ -103,7 +103,7 @@
         renderUsersPanel();
       }
 
-      // Panel Użytkowników – z formularzem dodawania oraz kontrolami
+      // Panel Użytkowników – pokazuje tylko osoby, które nie wysłały maila
       function renderUsersPanel(){
         const html = `
           <h3 class="mb-4">Panel Użytkowników</h3>
@@ -122,7 +122,7 @@
             <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
             <button id="deleteAllBtn" class="btn btn-danger ms-2">Usuń wszystkich</button>
           </div>
-          <!-- Tabela użytkowników z możliwością usuwania -->
+          <!-- Tabela użytkowników – wyświetlamy tylko tych, którzy nie wysłali maila -->
           <table class="table table-bordered" id="usersTable">
             <thead class="table-light">
               <tr>
@@ -141,7 +141,7 @@
         renderUsersTable();
       }
 
-      // Panel Logów – wyłącznie lista użytkowników i status
+      // Panel Logów – pokazuje wszystkie rekordy
       function renderLogsPanel(){
         const html = `
           <h3 class="mb-4">Logi użytkowników</h3>
@@ -159,7 +159,7 @@
         renderLogsTable();
       }
 
-      // Dodawanie użytkownika
+      // Dodawanie użytkownika (nowa osoba jest dodawana tylko, jeśli nie istnieje)
       async function onAddUser(e){
         e.preventDefault();
         const name = document.getElementById("newUserName").value.trim();
@@ -182,15 +182,15 @@
         }
       }
 
-      // Resetowanie statusów użytkowników
+      // Resetowanie statusów użytkowników (ustawia wszystkie na "Nie wysłano")
       async function onResetStatus(){
         if(!confirm("Na pewno zresetować statusy (ustawić jako 'Nie wysłano')?")) return;
         allUsers.forEach(u => u.sent = false);
         alert("Statusy zresetowane!");
-        // Aktualizujemy widok – w zakładce, która jest aktualnie wyświetlana:
-        const activeTab = document.querySelector("#adminContent table");
-        if(activeTab && activeTab.id === "usersTable") renderUsersTable();
-        else if(activeTab && activeTab.id === "logsTable") renderLogsTable();
+        // Aktualizujemy widok aktualnie aktywnej zakładki
+        const activeTable = document.querySelector("#adminContent table");
+        if(activeTable && activeTable.id === "usersTable") renderUsersTable();
+        else if(activeTable && activeTable.id === "logsTable") renderLogsTable();
       }
 
       // Usuwanie pojedynczego użytkownika
@@ -234,11 +234,12 @@
         }
       }
 
-      // Renderowanie tabeli użytkowników (w zakładce "Użytkownicy")
+      // Renderowanie tabeli użytkowników – w zakładce "Użytkownicy" wyświetlamy tylko osoby, które mają status "Nie wysłano"
       function renderUsersTable(){
         const tbody = document.querySelector("#usersTable tbody");
         tbody.innerHTML = "";
-        allUsers.forEach(user => {
+        const pendingUsers = allUsers.filter(user => !user.sent);
+        pendingUsers.forEach(user => {
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>${user.name}</td>
@@ -249,7 +250,7 @@
         });
       }
 
-      // Renderowanie tabeli logów (w zakładce "Logi")
+      // Renderowanie tabeli logów – w zakładce "Logi" pokazujemy wszystkie rekordy
       function renderLogsTable(){
         const tbody = document.querySelector("#logsTable tbody");
         tbody.innerHTML = "";
