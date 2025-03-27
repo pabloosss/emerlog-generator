@@ -21,12 +21,16 @@
     .text-center h2 {
       margin-bottom: 20px;
     }
-    /* Tabela */
     table.table {
       margin-top: 20px;
     }
-    /* Kolorowanie wierszy z wysłanym mailem – wiersze z sent = true będą wyświetlone jako "Wysłano", a te z false jako "Nie wysłano". */
-    /* Dodatkowa kolumna Akcje z przyciskami usuwania */
+    /* Spinner */
+    #sendingSpinner {
+      display: none;
+      text-align: center;
+      margin-top: 15px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -39,7 +43,7 @@
       <button id="goHomeBtn" class="btn btn-secondary mt-3">Powrót do strony głównej</button>
     </div>
 
-    <!-- Miejsce na dynamiczny kod (formularze, tabele, itp.) -->
+    <!-- Miejsce na dynamiczny kod -->
     <div id="output" class="mt-5"></div>
   </div>
 
@@ -62,7 +66,7 @@
 
   <script>
     // Globalna zmienna – lista użytkowników
-    let allUsers = []; // dane pobierane z /admin-data
+    let allUsers = [];
 
     // Obsługa przycisków logowania i powrotu
     document.getElementById("adminPanelBtn").addEventListener("click", () => {
@@ -77,22 +81,19 @@
     // Logowanie admina
     document.getElementById("loginBtn").addEventListener("click", async () => {
       const login = document.getElementById("adminLogin").value.trim();
-      const pass = document.getElementById("adminPass").value.trim();
-
+      const pass  = document.getElementById("adminPass").value.trim();
       if (login === "ewa" && pass === "admin") {
         alert("Zalogowano jako admin");
-        // Ukrywamy modal
+        // Ukryj modal
         document.getElementById("adminModal").classList.remove("show");
         document.querySelector(".modal-backdrop")?.remove();
-
-        // Ładujemy panel admina
         loadAdminPanel();
       } else {
         alert("Nieprawidłowy login lub hasło");
       }
     });
 
-    // Funkcja ładowania danych admina
+    // Pobieramy dane użytkowników z serwera
     async function loadAdminPanel() {
       try {
         const res = await fetch("/admin-data");
@@ -105,11 +106,11 @@
       }
     }
 
-    // Render panelu admina – formularz dodawania, filtry, wyszukiwanie, tabela
+    // Renderowanie panelu admina
     function renderAdminPanel() {
       const html = `
         <h3 class="mb-4">Lista użytkowników</h3>
-        <!-- Formularz dodawania nowego użytkownika -->
+        <!-- Formularz dodawania użytkownika -->
         <form id="addUserForm" class="mb-4">
           <div class="row g-2">
             <div class="col-md-8">
@@ -120,7 +121,7 @@
             </div>
           </div>
         </form>
-        <!-- Sekcja filtrów, wyszukiwania i sortowania -->
+        <!-- Filtry, wyszukiwanie, sortowanie -->
         <div class="row mb-3">
           <div class="col-md-4">
             <label for="searchInput" class="form-label">Szukaj:</label>
@@ -147,7 +148,7 @@
         <div class="d-flex justify-content-end mb-3">
           <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
         </div>
-        <!-- Tabela z użytkownikami -->
+        <!-- Tabela użytkowników -->
         <table class="table table-bordered" id="usersTable">
           <thead class="table-light">
             <tr>
@@ -160,25 +161,15 @@
         </table>
       `;
       document.getElementById("output").innerHTML = html;
-
-      // Obsługa formularza dodawania
       document.getElementById("addUserForm").addEventListener("submit", onAddUser);
-
-      // Obsługa wyszukiwania
       document.getElementById("searchInput").addEventListener("input", renderUsersTable);
-
-      // Obsługa filtrów i sortowania
       document.getElementById("statusFilter").addEventListener("change", renderUsersTable);
       document.getElementById("sortSelect").addEventListener("change", renderUsersTable);
-
-      // Obsługa resetu statusów
       document.getElementById("resetBtn").addEventListener("click", onResetStatus);
-
-      // Pierwsze wyświetlenie tabeli
       renderUsersTable();
     }
 
-    // Dodawanie nowego użytkownika
+    // Dodawanie użytkownika
     async function onAddUser(e) {
       e.preventDefault();
       const name = document.getElementById("newUserName").value.trim();
@@ -201,18 +192,19 @@
       }
     }
 
-    // Reset statusów – zmienia lokalnie dla wszystkich użytkowników property sent na false
+    // Reset statusów – lokalnie
     async function onResetStatus() {
-      if (!confirm("Na pewno zresetować statusy (z Wysłano na Nie wysłano)?")) return;
-      // Resetujemy lokalnie
+      if (!confirm("Na pewno zresetować statusy (ustawić jako 'Nie wysłano')?"))
+        return;
       allUsers.forEach(u => u.sent = false);
-      alert("Statusy zresetowane lokalnie!");
+      alert("Statusy zresetowane!");
       renderUsersTable();
     }
 
-    // Usuwanie użytkownika – zakładamy, że każdy użytkownik ma właściwość id
+    // Usuwanie użytkownika (zakładamy, że użytkownik ma unikalne id)
     async function onRemoveUser(userId) {
-      if (!confirm("Na pewno usunąć tego użytkownika?")) return;
+      if (!confirm("Na pewno usunąć tego użytkownika?"))
+        return;
       try {
         const res = await fetch("/remove-user", {
           method: "POST",
@@ -231,27 +223,21 @@
       }
     }
 
-    // Renderowanie tabeli użytkowników
     function renderUsersTable() {
       const filterVal = document.getElementById("statusFilter").value;
-      const sortVal = document.getElementById("sortSelect").value;
+      const sortVal   = document.getElementById("sortSelect").value;
       const searchVal = document.getElementById("searchInput").value.trim().toLowerCase();
 
       let filtered = [...allUsers];
 
-      // Wyszukiwanie
       if (searchVal) {
         filtered = filtered.filter(u => u.name.toLowerCase().includes(searchVal));
       }
-
-      // Filtrowanie statusu
       if (filterVal === "sent") {
         filtered = filtered.filter(u => u.sent);
       } else if (filterVal === "unsent") {
         filtered = filtered.filter(u => !u.sent);
       }
-
-      // Sortowanie
       if (sortVal === "nameAsc") {
         filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
       } else if (sortVal === "nameDesc") {
@@ -280,7 +266,6 @@
         tbody.appendChild(tr);
       });
     }
-
     // Upewnij się, że funkcja onRemoveUser jest dostępna globalnie
     window.onRemoveUser = onRemoveUser;
   })();
