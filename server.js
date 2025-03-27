@@ -1,4 +1,3 @@
-// server.js
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
@@ -112,8 +111,6 @@ app.post("/send-pdf", async (req, res) => {
     res.status(500).json({ error: "Błąd wysyłki PDF" });
   }
 });
-// Plik z bazą mailową
-
 
 // Endpoint: pobierz dane admina
 app.get("/admin-data", (req, res) => {
@@ -142,7 +139,7 @@ app.post("/add-user", (req, res) => {
   res.sendStatus(200);
 });
 
-// Funkcja logowania wysłanego maila (można użyć przy wysyłce)
+// Duplikat funkcji logSentMail - można usunąć, jeśli już występuje wyżej
 function logSentMail(name) {
   let data = [];
   if (fs.existsSync(mailDB)) {
@@ -155,12 +152,43 @@ function logSentMail(name) {
 
   fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
 }
+
+// Kolejny endpoint pobierający dane admina (duplikat)
 app.get("/admin-data", (req, res) => {
   if (fs.existsSync(mailDB)) {
     const data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
     return res.json(data);
   }
   return res.json([]);
+});
+
+// ---------------------
+// DODANE ENDPOINTY
+// ---------------------
+
+// Endpoint: usuwanie pojedynczego użytkownika
+app.post("/remove-user", (req, res) => {
+  const { id } = req.body; // Zakładamy, że 'id' to nazwa użytkownika
+  if (!id) return res.status(400).send("Brak identyfikatora użytkownika");
+
+  let data = [];
+  if (fs.existsSync(mailDB)) {
+    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+  }
+
+  const newData = data.filter(e => e.name !== id);
+  fs.writeFileSync(mailDB, JSON.stringify(newData, null, 2));
+
+  console.log(`Usunięto użytkownika: ${id}`);
+  res.sendStatus(200);
+});
+
+// Endpoint: usuwanie wszystkich użytkowników
+app.post("/remove-all-users", (req, res) => {
+  fs.writeFileSync(mailDB, JSON.stringify([], null, 2));
+
+  console.log("Usunięto wszystkich użytkowników");
+  res.sendStatus(200);
 });
 
 // Start
