@@ -17,11 +17,9 @@ function logSentMail(name) {
   if (fs.existsSync(mailDB)) {
     data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
   }
-
   const index = data.findIndex(e => e.name === name);
   if (index !== -1) data[index].sent = true;
   else data.push({ name, sent: true });
-
   fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
 }
 
@@ -123,7 +121,7 @@ app.get("/admin-data", (req, res) => {
 
 // Endpoint: dodaj użytkownika do listy
 app.post("/add-user", (req, res) => {
-  const { name } = req.body;
+  const { name, manual } = req.body;
   if (!name) return res.status(400).send("Brak imienia");
 
   let data = [];
@@ -131,40 +129,15 @@ app.post("/add-user", (req, res) => {
     data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
   }
 
+  // Dodajemy tylko, jeśli użytkownik jeszcze nie istnieje
   if (!data.find(e => e.name === name)) {
-    data.push({ name, sent: false });
+    // Jeśli dodany ręcznie (manual === true), ustawiamy sent: true
+    data.push({ name, sent: manual ? true : false });
     fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
   }
 
   res.sendStatus(200);
 });
-
-// Duplikat funkcji logSentMail - można usunąć, jeśli już występuje wyżej
-function logSentMail(name) {
-  let data = [];
-  if (fs.existsSync(mailDB)) {
-    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  }
-
-  const index = data.findIndex(e => e.name === name);
-  if (index !== -1) data[index].sent = true;
-  else data.push({ name, sent: true });
-
-  fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
-}
-
-// Kolejny endpoint pobierający dane admina (duplikat)
-app.get("/admin-data", (req, res) => {
-  if (fs.existsSync(mailDB)) {
-    const data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-    return res.json(data);
-  }
-  return res.json([]);
-});
-
-// ---------------------
-// DODANE ENDPOINTY
-// ---------------------
 
 // Endpoint: usuwanie pojedynczego użytkownika
 app.post("/remove-user", (req, res) => {
@@ -186,12 +159,11 @@ app.post("/remove-user", (req, res) => {
 // Endpoint: usuwanie wszystkich użytkowników
 app.post("/remove-all-users", (req, res) => {
   fs.writeFileSync(mailDB, JSON.stringify([], null, 2));
-
   console.log("Usunięto wszystkich użytkowników");
   res.sendStatus(200);
 });
 
-// Start
+// Start serwera
 app.listen(PORT, () => {
   console.log(`🚀 Serwer działa na porcie ${PORT}`);
 });
