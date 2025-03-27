@@ -245,15 +245,43 @@
     "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"
   ];
 
-  // Globalne tablice
+  // Globalne tablice na dni wolne
   window.customHolidays = window.customHolidays || [];
   window.randomFreeDaysAdded = window.randomFreeDaysAdded || [];
 
+  // ==================== DODAJEMY POTRZEBNE FUNKCJE =======================
+
+  // Sprawdza, czy dany dzień (day, month, year) jest na liście customHolidays
+  function checkCustomHoliday(day, month, year){
+    var dd = String(day).padStart(2,'0');
+    var mm = String(month).padStart(2,'0');
+    var yyyy = String(year).padStart(4,'0');
+    var fullDate = yyyy + "-" + mm + "-" + dd;
+    return window.customHolidays.find(function(x){ return x.date === fullDate; }) || null;
+  }
+
+  // Sprawdza, czy to jeden z stałych świąt (z fixedHolidays)
+  function isFixedHoliday(day, month){
+    var dd = String(day).padStart(2,'0');
+    var mm = String(month).padStart(2,'0');
+    return fixedHolidays.includes(dd + "-" + mm);
+  }
+
+  // Sprawdza, czy to weekend (niedziela / sobota)
+  function isWeekend(dateObj){
+    var dayOfWeek = dateObj.getDay(); // 0=Sunday,6=Saturday
+    return (dayOfWeek === 0 || dayOfWeek === 6);
+  }
+
+  // ==================== KONIEC DODANYCH FUNKCJI ==========================
+
   document.addEventListener("DOMContentLoaded", function(){
+    // Słuchacze zmiany typu umowy
     document.querySelectorAll('input[name="contractType"]').forEach(function(rad){
       rad.addEventListener("change", onContractChange);
     });
 
+    // Obsługa formularza
     var form = document.getElementById("generatorForm");
     form.addEventListener("submit", function(e){
       e.preventDefault();
@@ -265,6 +293,7 @@
       form.classList.add("was-validated");
     });
 
+    // Obsługa dodawania dni wolnych
     document.getElementById("addHoliday").addEventListener("click", function(){
       var selDate = document.getElementById("holidayPicker").value;
       var holidayType = document.getElementById("holidayTypeSelect").value;
@@ -272,7 +301,7 @@
         alert("Wybierz datę!");
         return;
       }
-      if(!window.customHolidays.find(function(x){ return x.date===selDate;})){
+      if(!window.customHolidays.find(function(x){ return x.date === selDate; })){
         window.customHolidays.push({ date: selDate, type: holidayType });
       } else {
         alert("Ten dzień jest już dodany jako wolny!");
@@ -287,7 +316,7 @@
     document.getElementById("sendingSpinner").style.display = "none";
   });
 
-  // Przełączanie widoczności / wymagalności w zależności od umowy
+  // W zależności od umowy włącz/wyłącz field z godzinami + randomHolidays
   function onContractChange(){
     var type = document.querySelector('input[name="contractType"]:checked').value;
     var randomH = document.getElementById("randomHolidays");
@@ -295,23 +324,25 @@
     var hoursInput = document.getElementById("hours");
     var holidayTypeSelect = document.getElementById("holidayTypeSelect");
 
-    if(type==="zlecenie"){
-      hoursGroup.style.display="block";
-      hoursInput.required=true;
-      randomH.checked=true;
-      randomH.disabled=true;
-      holidayTypeSelect.innerHTML="";
+    if(type === "zlecenie"){
+      hoursGroup.style.display = "block";
+      hoursInput.required = true;
+      randomH.checked = true;
+      randomH.disabled = true;
+      // Tylko L4
+      holidayTypeSelect.innerHTML = "";
       var opt = document.createElement("option");
-      opt.value="Zwolnienie lekarskie (L4)";
-      opt.textContent="Zwolnienie lekarskie (L4)";
+      opt.value = "Zwolnienie lekarskie (L4)";
+      opt.textContent = "Zwolnienie lekarskie (L4)";
       holidayTypeSelect.appendChild(opt);
     } else {
-      hoursGroup.style.display="none";
-      hoursInput.required=false;
-      randomH.checked=false;
-      randomH.disabled=false;
-      holidayTypeSelect.innerHTML="";
-      var ops=[
+      // Umowa o pracę
+      hoursGroup.style.display = "none";
+      hoursInput.required = false;
+      randomH.checked = false;
+      randomH.disabled = false;
+      holidayTypeSelect.innerHTML = "";
+      var ops = [
         "Urlop wypoczynkowy",
         "Urlop okolicznościowy",
         "Zwolnienie lekarskie (L4)",
@@ -320,24 +351,25 @@
       ];
       ops.forEach(function(o){
         var opt = document.createElement("option");
-        opt.value=o;
-        opt.textContent=o;
+        opt.value = o;
+        opt.textContent = o;
         holidayTypeSelect.appendChild(opt);
       });
     }
   }
 
+  // Wyświetl listę dni wolnych
   function renderHolidays(){
     var ul = document.getElementById("holidaysList");
-    ul.innerHTML="";
+    ul.innerHTML = "";
     window.customHolidays.forEach(function(item){
       var li = document.createElement("li");
-      li.textContent=item.date+" – "+item.type;
+      li.textContent = item.date + " – " + item.type;
       var btn = document.createElement("button");
-      btn.textContent="Usuń";
+      btn.textContent = "Usuń";
       btn.classList.add("btn","btn-sm","btn-danger","ms-2");
       btn.addEventListener("click", function(){
-        window.customHolidays=window.customHolidays.filter(function(x){ return x!==item;});
+        window.customHolidays = window.customHolidays.filter(function(x){ return x !== item; });
         renderHolidays();
       });
       li.appendChild(btn);
@@ -345,191 +377,196 @@
     });
   }
 
-  // Ogranicz datePicker do wybranego miesiaca i roku
+  // Ustaw min/max w datePicker
   function updateHolidayPickerRange(){
-    var mVal=parseInt(document.getElementById("month").value,10);
-    var yVal=parseInt(document.getElementById("year").value,10);
-    var holidayPicker=document.getElementById("holidayPicker");
-    if(!mVal||!yVal){
+    var mVal = parseInt(document.getElementById("month").value, 10);
+    var yVal = parseInt(document.getElementById("year").value, 10);
+    var holidayPicker = document.getElementById("holidayPicker");
+    if(!mVal || !yVal){
       holidayPicker.removeAttribute("min");
       holidayPicker.removeAttribute("max");
       return;
     }
-    var daysInMonth=new Date(yVal,mVal,0).getDate();
-    var mm=String(mVal).padStart(2,'0');
-    var minDate=yVal+"-"+mm+"-01";
-    var maxDate=yVal+"-"+mm+"-"+daysInMonth;
-    holidayPicker.setAttribute("min",minDate);
-    holidayPicker.setAttribute("max",maxDate);
+    var daysInMonth = new Date(yVal, mVal, 0).getDate();
+    var mm = String(mVal).padStart(2,'0');
+    var minDate = yVal + "-" + mm + "-01";
+    var maxDate = yVal + "-" + mm + "-" + daysInMonth;
+    holidayPicker.setAttribute("min", minDate);
+    holidayPicker.setAttribute("max", maxDate);
 
-    if(holidayPicker.value && (holidayPicker.value<minDate||holidayPicker.value>maxDate)){
-      holidayPicker.value="";
+    if(holidayPicker.value && (holidayPicker.value < minDate || holidayPicker.value > maxDate)){
+      holidayPicker.value = "";
     }
   }
 
-  // Rozdział godzin: min 4h, max 12h dziennie
+  // Rozdział godzin zlecenie: min 4h, max 12h
   function distributeHours(totalHours, daysCount) {
     const MIN_DAY = 4;
     const MAX_DAY = 12;
+    if(daysCount === 0) return null;
 
-    if (daysCount === 0) return null;
-    const minPossible = MIN_DAY * daysCount;
-    const maxPossible = MAX_DAY * daysCount;
-
-    if (totalHours < minPossible) {
+    var minPossible = MIN_DAY * daysCount;
+    var maxPossible = MAX_DAY * daysCount;
+    if(totalHours < minPossible){
       alert(`Za mało godzin (min. ${minPossible}).`);
       return null;
     }
-    if (totalHours > maxPossible) {
+    if(totalHours > maxPossible){
       alert(`Za dużo godzin (max. ${maxPossible}).`);
       return null;
     }
 
-    // Start z 4h/dzień
     let arr = new Array(daysCount).fill(MIN_DAY);
     let leftover = totalHours - (daysCount * MIN_DAY);
 
-    while (leftover > 0) {
+    while(leftover > 0){
       let i = Math.floor(Math.random() * daysCount);
-      if (arr[i] < MAX_DAY) {
+      if(arr[i] < MAX_DAY){
         arr[i]++;
         leftover--;
       }
       let allFull = arr.every(function(day){ return day === MAX_DAY; });
-      if (allFull && leftover > 0) {
+      if(allFull && leftover > 0){
         alert("Nie można rozdzielić godzin - wszystkie dni osiągnęły 12h.");
         return null;
       }
     }
-
-    let sumCheck = arr.reduce(function(a, b){ return a + b; }, 0);
-    if (sumCheck !== totalHours) {
+    let sumCheck = arr.reduce(function(a,b){ return a+b; },0);
+    if(sumCheck !== totalHours){
       alert("Błąd: sumy się nie zgadzają. Spróbuj mniej godzin.");
       return null;
     }
     return arr;
   }
 
-  function getRandomInt(mi,ma){
-    mi=Math.ceil(mi);
-    ma=Math.floor(ma);
-    return (ma<mi)?mi:Math.floor(Math.random()*(ma-mi+1))+mi;
+  function getRandomInt(mi, ma){
+    mi = Math.ceil(mi);
+    ma = Math.floor(ma);
+    return (ma < mi) ? mi : Math.floor(Math.random()*(ma-mi+1))+mi;
   }
 
   async function generateTable(){
-    var fullName=document.getElementById("name").value.trim();
-    var monthVal=parseInt(document.getElementById("month").value,10);
-    var yearVal=parseInt(document.getElementById("year").value,10);
-    var addRandom=document.getElementById("randomHolidays").checked;
-    var contractType=document.querySelector('input[name="contractType"]:checked').value;
+    var fullName = document.getElementById("name").value.trim();
+    var monthVal = parseInt(document.getElementById("month").value,10);
+    var yearVal = parseInt(document.getElementById("year").value,10);
+    var addRandom = document.getElementById("randomHolidays").checked;
+    var contractType = document.querySelector('input[name="contractType"]:checked').value;
 
-    if(!fullName||!monthVal||!yearVal){
+    // Sprawdzamy wypełnienie
+    if(!fullName || !monthVal || !yearVal){
       alert("Proszę wypełnić wszystkie wymagane pola!");
       return;
     }
 
-    var daysInMonth=new Date(yearVal,monthVal,0).getDate();
-    var dayData=[];
+    // Ile dni w wybranym miesiącu
+    var daysInMonth = new Date(yearVal, monthVal, 0).getDate();
+    var dayData = [];
     for(var d=1; d<=daysInMonth; d++){
-      var dateObj=new Date(yearVal,monthVal-1,d);
-      var cHol=checkCustomHoliday(d,monthVal,yearVal);
-      var weekend=isWeekend(dateObj);
-      var fixHol=isFixedHoliday(d,monthVal);
+      var dateObj = new Date(yearVal, monthVal-1, d);
 
-      var holType="";
+      // Sprawdzamy: wolne z customHolidays? z fixedHolidays? weekend?
+      var cHol = checkCustomHoliday(d, monthVal, yearVal);
+      var weekend = isWeekend(dateObj);
+      var fixHol = isFixedHoliday(d, monthVal);
+
+      var holType = "";
       if(cHol){
-        holType=cHol.type;
+        holType = cHol.type;
       } else if(fixHol){
-        holType="Święto";
+        holType = "Święto";
       }
+      // Jeżeli weekend/święto/custom => isWorkingDay = false
+      var isWork = (!weekend && !fixHol && !cHol);
 
-      var isWork=(!weekend && !fixHol && !cHol);
       dayData.push({
-        day:d,
-        date:dateObj,
-        isWorkingDay:isWork,
-        holidayType:holType,
-        hours:0,
-        start:"-",
-        end:"-"
+        day: d,
+        date: dateObj,
+        isWorkingDay: isWork,
+        holidayType: holType,
+        hours: 0,
+        start: "-",
+        end: "-"
       });
     }
 
-    // Losowe wolne: w razie zlecenie i checkbox
-    if(contractType==="zlecenie" && addRandom){
-      var pattern=[0,1,3,1,0,0];
-      var grouped={};
+    // Jeżeli zlecenie + random -> losowe wolne
+    if(contractType === "zlecenie" && addRandom){
+      var pattern = [0,1,3,1,0,0]; // np. 6 tygodni, w 1. tyg:0 wolnych, 2.:1 wolny, 3.:3 wolne,...
+      var grouped = {};
       dayData.forEach(function(it){
-        var week=Math.floor((it.day-1)/7)+1;
-        if(!grouped[week]) grouped[week]=[];
+        var week = Math.floor((it.day-1)/7)+1;
+        if(!grouped[week]) grouped[week] = [];
         grouped[week].push(it);
       });
       Object.keys(grouped).forEach(function(k){
-        var arr=grouped[k].filter(function(x){return x.isWorkingDay;});
-        var need=pattern[parseInt(k)-1]||0;
-        need=Math.min(need,arr.length);
-        if(need>0){
-          arr.sort(function(){return 0.5 - Math.random();});
+        var arr = grouped[k].filter(function(x){ return x.isWorkingDay; });
+        var need = pattern[parseInt(k)-1] || 0;
+        need = Math.min(need, arr.length);
+        if(need > 0){
+          arr.sort(function(){ return 0.5 - Math.random(); });
           arr.slice(0,need).forEach(function(dd){
-            dd.isWorkingDay=false;
-            dd.holidayType="Losowy dzień wolny";
+            dd.isWorkingDay = false;
+            dd.holidayType = "Losowy dzień wolny";
           });
         }
       });
     }
 
-    var workingDays=dayData.filter(function(x){return x.isWorkingDay;});
-    var totalHours=0;
+    // Które dni są pracujące
+    var workingDays = dayData.filter(function(x){ return x.isWorkingDay; });
+    var totalHours = 0;
 
-    if(contractType==="praca"){
+    if(contractType === "praca"){
       workingDays.forEach(function(d){
-        d.hours=8;
-        d.start="8:00";
-        d.end="16:00";
+        d.hours = 8;
+        d.start = "8:00";
+        d.end   = "16:00";
       });
-      totalHours=workingDays.length*8;
-    } else if(contractType==="praca3/4"){
+      totalHours = workingDays.length * 8;
+    } else if(contractType === "praca3/4"){
       workingDays.forEach(function(d){
-        d.hours=6;
-        d.start="8:00";
-        d.end="14:00";
+        d.hours = 6;
+        d.start = "8:00";
+        d.end   = "14:00";
       });
-      totalHours=workingDays.length*6;
-    } else if(contractType==="zlecenie"){
-      totalHours=parseInt(document.getElementById("hours").value,10);
-      var hoursArr=distributeHours(totalHours, workingDays.length);
+      totalHours = workingDays.length * 6;
+    } else if(contractType === "zlecenie"){
+      // Liczba godzin, user inputs
+      totalHours = parseInt(document.getElementById("hours").value,10);
+      var hoursArr = distributeHours(totalHours, workingDays.length);
       if(!hoursArr) return;
       for(var i=0; i<workingDays.length; i++){
-        var wd=workingDays[i];
-        wd.hours=hoursArr[i];
-        var maxStart=20 - hoursArr[i];
-        var sH=getRandomInt(6, maxStart);
-        var eH=sH + hoursArr[i];
-        if(eH>20){
+        var wd = workingDays[i];
+        wd.hours = hoursArr[i];
+        var maxStart = 20 - hoursArr[i];
+        var sH = getRandomInt(6, maxStart);
+        var eH = sH + hoursArr[i];
+        if(eH > 20){
           alert("Dzień "+wd.day+": koniec pracy po 20:00!");
           return;
         }
-        wd.start=sH+":00";
-        wd.end=eH+":00";
+        wd.start = sH+":00";
+        wd.end   = eH+":00";
       }
-      var sumCheck=workingDays.reduce(function(a,b){return a+b.hours;},0);
-      if(sumCheck!==totalHours){
+      var sumCheck = workingDays.reduce(function(a,b){return a+b.hours;},0);
+      if(sumCheck !== totalHours){
         alert("Finalna suma godzin to "+sumCheck+", a zadano "+totalHours+". Spróbuj mniejszą liczbę godzin.");
         return;
       }
     }
 
-    var nameParts=fullName.split(/\s+/);
-    var lastName=nameParts.slice(1).join(" ");
+    // Tworzymy finalne wiersze
+    var nameParts = fullName.split(/\s+/);
+    var lastName  = nameParts.slice(1).join(" ");
 
-    // Render wierszy
-    var rows=dayData.map(function(inf){
-      var dd=String(inf.day).padStart(2,'0');
-      var mm=String(monthVal).padStart(2,'0');
-      var yyyy=yearVal;
-      var wkd=inf.date.toLocaleString('pl-PL',{weekday:'short'});
+    var rows = dayData.map(function(inf){
+      var dd = String(inf.day).padStart(2,'0');
+      var mm = String(monthVal).padStart(2,'0');
+      var yyyy = yearVal;
+      var wkd = inf.date.toLocaleString('pl-PL',{weekday:'short'});
 
-      if(inf.isWorkingDay && inf.hours>0){
+      if(inf.isWorkingDay && inf.hours > 0){
+        // normalny dzień pracy
         return `<tr>
           <td>${inf.day}</td>
           <td>${dd}.${mm}.${yyyy} (${wkd})</td>
@@ -541,7 +578,7 @@
           <td>-</td>
         </tr>`;
       } else {
-        // Kolorowanie .holiday w CSS => tło i tekst czerwony
+        // holiday (kolor czerwony, definicja w CSS)
         var shownHoliday = (inf.holidayType === "Losowy dzień wolny") ? "-" : (inf.holidayType || "-");
         return `<tr class="holiday">
           <td>${inf.day}</td>
@@ -556,7 +593,7 @@
       }
     });
 
-    var sumOfHours=workingDays.reduce(function(a,b){return a+b.hours;},0);
+    var sumOfHours = workingDays.reduce(function(a,b){return a+b.hours;},0);
     rows.push(`
       <tr class="fw-bold">
         <td colspan="4">Suma godzin:</td>
@@ -565,7 +602,8 @@
       </tr>
     `);
 
-    var tableHTML=`
+    // Wstawiamy gotową tabelę do #output
+    var tableHTML = `
       <h3 class="mt-4">${monthNames[monthVal-1]} ${yearVal}</h3>
       <h4>${fullName}</h4>
       <p><strong>${
@@ -593,65 +631,62 @@
         </tbody>
       </table>
     `;
-    document.getElementById("output").innerHTML=tableHTML;
-    document.getElementById("exportButtons").style.display="block";
+    document.getElementById("output").innerHTML = tableHTML;
+    document.getElementById("exportButtons").style.display = "block";
 
-    document.getElementById("generatePDF").onclick=downloadPDF;
+    // Obsługa generowania PDF
+    document.getElementById("generatePDF").onclick = downloadPDF;
   }
 
   async function downloadPDF(){
     try{
-      var jsPDF=window.jspdf.jsPDF;
-      var pdf=new jsPDF("portrait","pt","a4");
-      var margin=20;
+      var jsPDF = window.jspdf.jsPDF;
+      var pdf = new jsPDF("portrait","pt","a4");
+      var margin = 20;
 
-      var pageWidth=pdf.internal.pageSize.getWidth();
-      var pageHeight=pdf.internal.pageSize.getHeight();
+      var pageWidth  = pdf.internal.pageSize.getWidth();
+      var pageHeight = pdf.internal.pageSize.getHeight();
 
       // Logo
-      var logoURL="https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
-      var logoImg=new Image();
-      logoImg.crossOrigin="Anonymous";
-      logoImg.src=logoURL;
-      await new Promise(function(resolve){ logoImg.onload=resolve; });
+      var logoURL = "https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
+      var logoImg = new Image();
+      logoImg.crossOrigin = "Anonymous";
+      logoImg.src = logoURL;
+      await new Promise(function(resolve){ logoImg.onload = resolve; });
 
-      var desiredLogoWidth=150;
-      var desiredLogoHeight=logoImg.height*(desiredLogoWidth/logoImg.width);
+      var desiredLogoWidth = 150;
+      var desiredLogoHeight = logoImg.height*(desiredLogoWidth/logoImg.width);
       if(!desiredLogoHeight || desiredLogoHeight<=0 || isNaN(desiredLogoHeight)){
-        desiredLogoHeight=50;
+        desiredLogoHeight = 50;
       }
-      // Dodajemy logo w lewym górnym rogu – np. x=margin, y=margin
-      pdf.addImage(logoImg,"PNG",margin,margin,desiredLogoWidth,desiredLogoHeight);
 
-      // Tabela
-      var outputEl=document.getElementById("output");
+      // Dodaj logo w lewym górnym rogu
+      pdf.addImage(logoImg, "PNG", margin, margin, desiredLogoWidth, desiredLogoHeight);
+
+      // Wstawiamy zrzut tabeli
+      var outputEl = document.getElementById("output");
       if(!outputEl){
         alert("Brak elementu #output do wygenerowania PDF.");
         return;
       }
-
-      var canvas=await html2canvas(outputEl,{
+      var canvas = await html2canvas(outputEl, {
         scale:1,
         useCORS:true,
         allowTaint:false
       });
+      var tableImg = canvas.toDataURL("image/png");
 
-      var tableImg=canvas.toDataURL("image/png");
-      // Dostępny prostokąt (po uwzględnieniu marginesów i miejsca na logo):
-      // np. odejmujemy 2*margins w szerokości i w wysokości
-      // + ewentualnie offset logo, ale na prośbę "prawie całą stronę" pomijam zbyt finezyjne podejście
-      var availableWidth=pageWidth - 2*margin;
-      var availableHeight=pageHeight - 2*margin;
+      var availableWidth  = pageWidth  - 2*margin;
+      var availableHeight = pageHeight - 2*margin;
+      var ratio = Math.min( availableWidth / canvas.width, availableHeight / canvas.height );
 
-      var ratio=Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
-      var finalW=canvas.width*ratio;
-      var finalH=canvas.height*ratio;
+      var finalW = canvas.width  * ratio;
+      var finalH = canvas.height * ratio;
 
-      // Wyśrodkuj w tym prostokącie
-      var posX= margin + (availableWidth - finalW)/2;
-      var posY= margin + (availableHeight - finalH)/2;
+      var posX = margin + (availableWidth  - finalW)/2;
+      var posY = margin + (availableHeight - finalH)/2;
 
-      pdf.addImage(tableImg,"PNG",posX,posY,finalW,finalH);
+      pdf.addImage(tableImg, "PNG", posX, posY, finalW, finalH);
       pdf.save("Tabela_Godzinowa_Pion.pdf");
     }catch(err){
       console.error("Błąd generowania PDF (IIFE):",err);
@@ -659,22 +694,22 @@
     }
   }
 
-  document.getElementById("sendPDFEmail").addEventListener("click",async function(){
-    var name=document.getElementById("name").value.trim();
+  document.getElementById("sendPDFEmail").addEventListener("click", async function(){
+    var name = document.getElementById("name").value.trim();
     if(!name){
       alert("Podaj imię i nazwisko, zanim wyślesz e-mailem!");
       return;
     }
     document.getElementById("sendingSpinner").style.display = "block";
 
-    var jsPDF=window.jspdf.jsPDF;
-    var pdf=new jsPDF("portrait","pt","a4");
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf   = new jsPDF("portrait","pt","a4");
 
-    var margin=20;
-    var pageWidth=pdf.internal.pageSize.getWidth();
-    var pageHeight=pdf.internal.pageSize.getHeight();
+    var margin = 20;
+    var pageWidth  = pdf.internal.pageSize.getWidth();
+    var pageHeight = pdf.internal.pageSize.getHeight();
 
-    var outputEl=document.getElementById("output");
+    var outputEl = document.getElementById("output");
     if(!outputEl){
       alert("Najpierw wygeneruj tabelę!");
       document.getElementById("sendingSpinner").style.display = "none";
@@ -682,45 +717,44 @@
     }
 
     try{
-      var canvas=await html2canvas(outputEl,{
+      var canvas = await html2canvas(outputEl, {
         scale:1,
         useCORS:true,
         allowTaint:false
       });
+      var tableImg = canvas.toDataURL("image/png");
 
-      var tableImg=canvas.toDataURL("image/png");
+      // Logo
+      var logoImg = new Image();
+      logoImg.crossOrigin = "Anonymous";
+      logoImg.src = "https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
+      await new Promise(function(resolve){ logoImg.onload = resolve; });
 
-      // Wstawiamy logo w lewym górnym rogu
-      var logoImg=new Image();
-      logoImg.crossOrigin="Anonymous";
-      logoImg.src="https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
-      await new Promise(function(resolve){ logoImg.onload=resolve; });
-
-      var desiredLogoWidth=150;
-      var desiredLogoHeight=logoImg.height*(desiredLogoWidth/logoImg.width);
+      var desiredLogoWidth = 150;
+      var desiredLogoHeight = logoImg.height*(desiredLogoWidth/logoImg.width);
       if(!desiredLogoHeight||desiredLogoHeight<=0||isNaN(desiredLogoHeight)){
         desiredLogoHeight=50;
       }
       pdf.addImage(logoImg,"PNG",margin,margin,desiredLogoWidth,desiredLogoHeight);
 
-      var availableWidth=pageWidth - 2*margin;
-      var availableHeight=pageHeight - 2*margin;
+      var availableWidth  = pageWidth  - 2*margin;
+      var availableHeight = pageHeight - 2*margin;
 
-      var ratio=Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
-      var finalW=canvas.width * ratio;
-      var finalH=canvas.height * ratio;
+      var ratio = Math.min( availableWidth / canvas.width, availableHeight / canvas.height );
+      var finalW = canvas.width  * ratio;
+      var finalH = canvas.height * ratio;
 
-      var posX= margin + (availableWidth - finalW)/2;
-      var posY= margin + (availableHeight - finalH)/2;
+      var posX = margin + (availableWidth  - finalW)/2;
+      var posY = margin + (availableHeight - finalH)/2;
 
-      pdf.addImage(tableImg,"PNG",posX,posY,finalW,finalH);
+      pdf.addImage(tableImg, "PNG", posX, posY, finalW, finalH);
 
-      var pdfBlob=pdf.output("blob");
-      var reader=new FileReader();
-      reader.onloadend=async function(){
-        var base64=reader.result.split(",")[1];
+      var pdfBlob = pdf.output("blob");
+      var reader  = new FileReader();
+      reader.onloadend = async function(){
+        var base64 = reader.result.split(",")[1];
         try{
-          var resp=await fetch("/send-pdf",{
+          var resp = await fetch("/send-pdf", {
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({ name:name, pdfData:base64 })
@@ -729,7 +763,7 @@
 
           if(resp.ok){
             alert("PDF został wysłany e-mailem!");
-          }else{
+          } else {
             alert("Błąd przy wysyłaniu PDF.");
           }
         }catch(e){
