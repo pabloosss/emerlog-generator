@@ -88,7 +88,7 @@ app.post("/send-pdf", async (req, res) => {
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: "pawel.ruchlicki@emerlog.eu",
+      to: "ewa.dusinska@emerlog.eu",
       subject: `Rozliczenie godzin (PDF) - ${name}`,
       text: "W załączniku przesyłamy plik PDF z harmonogramem.",
       attachments: [
