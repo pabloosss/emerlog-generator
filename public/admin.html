@@ -110,7 +110,7 @@
       function renderUsersPanel(){
         const html = `
           <h3 class="mb-4">Panel Użytkowników</h3>
-          <!-- Formularz dodawania nowego użytkownika (dodaje do logów, czyli status "Wysłano") -->
+          <!-- Formularz dodawania nowego użytkownika (dodaje z domyślnym statusem "Nie wysłano") -->
           <form id="addUserForm" class="mb-4">
             <div class="row g-2">
               <div class="col-md-8">
@@ -127,7 +127,7 @@
               <input type="text" id="searchInput" class="form-control" placeholder="Szukaj po imieniu">
             </div>
             <div class="col-md-4">
-              <!-- Ustawiamy domyślnie wybrany filtr na "Nie wysłano" -->
+              <!-- Domyślny filtr ustawiony na "Nie wysłano" -->
               <select id="statusFilter" class="form-select">
                 <option value="unsent" selected>Nie wysłano</option>
                 <option value="sent">Wysłano</option>
@@ -185,7 +185,7 @@
         renderLogsTable();
       }
 
-      // Dodawanie użytkownika – przy wysłaniu formularza wysyłamy parametr manual: true
+      // Dodawanie użytkownika – przy wysłaniu formularza nie wysyłamy parametru manual, więc domyślnie zapisuje się z sent: false
       async function onAddUser(e){
         e.preventDefault();
         const name = document.getElementById("newUserName").value.trim();
@@ -194,10 +194,11 @@
           const res = await fetch("/add-user", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name, manual: true })
+            // Nie wysyłamy manual: true – domyślnie użytkownik będzie dodany z sent: false
+            body: JSON.stringify({ name })
           });
           if (res.ok) {
-            alert("Użytkownik dodany do logów!");
+            alert("Użytkownik dodany do użytkowników!");
             loadAdminPanel();
           } else {
             alert("Błąd przy dodawaniu użytkownika.");
@@ -273,8 +274,6 @@
           filtered = filtered.filter(u => u.sent);
         } else if(statusValue === "unsent") {
           filtered = filtered.filter(u => !u.sent);
-        } else if(statusValue === "all"){
-          // pozostawiamy bez filtrowania
         }
         if(sortValue === "nameAsc") {
           filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
