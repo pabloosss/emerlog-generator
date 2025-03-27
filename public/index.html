@@ -324,10 +324,16 @@
       randomH.checked=true;
       randomH.disabled=true;
       holidayTypeSelect.innerHTML="";
-      var opt = document.createElement("option");
-      opt.value="Zwolnienie lekarskie (L4)";
-      opt.textContent="Zwolnienie lekarskie (L4)";
-      holidayTypeSelect.appendChild(opt);
+      // Dodajemy opcję "---"
+      var optDefault = document.createElement("option");
+      optDefault.value = "---";
+      optDefault.textContent = "---";
+      holidayTypeSelect.appendChild(optDefault);
+      // Dodajemy opcję "Zwolnienie lekarskie (L4)"
+      var optL4 = document.createElement("option");
+      optL4.value = "Zwolnienie lekarskie (L4)";
+      optL4.textContent = "Zwolnienie lekarskie (L4)";
+      holidayTypeSelect.appendChild(optL4);
     } else {
       hoursGroup.style.display="none";
       hoursInput.required=false;
