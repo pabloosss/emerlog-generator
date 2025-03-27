@@ -74,14 +74,19 @@
 
     // Funkcja do pobrania danych z serwera i narysowania panelu
     async function loadAdminPanel() {
-      const res = await fetch("/admin-data");
-      const data = await res.json();
+      try {
+        const res = await fetch("/admin-data");
+        const data = await res.json();
 
-      // Zapamiętujemy w zmiennej globalnej
-      allUsers = data;
+        // Zapamiętujemy w zmiennej globalnej
+        allUsers = data;
 
-      // Rysujemy HTML panelu (filtry, sortowanie, tabela itd.)
-      renderAdminPanel();
+        // Rysujemy HTML panelu (filtry, sortowanie, tabela itd.)
+        renderAdminPanel();
+      } catch (err) {
+        alert("Błąd przy pobieraniu /admin-data");
+        console.error(err);
+      }
     }
 
     function renderAdminPanel() {
@@ -102,9 +107,13 @@
           </div>
         </form>
 
-        <!-- Sekcja filtrów i sortowania -->
+        <!-- Sekcja filtrów, wyszukiwania i sortowania -->
         <div class="row mb-3">
-          <div class="col-md-6">
+          <div class="col-md-4">
+            <label for="searchInput" class="form-label">Szukaj:</label>
+            <input type="text" id="searchInput" class="form-control" placeholder="Wpisz fragment imienia/nazwiska">
+          </div>
+          <div class="col-md-4">
             <label for="statusFilter" class="form-label">Filtr statusu:</label>
             <select id="statusFilter" class="form-select">
               <option value="all">Wszystko</option>
@@ -112,7 +121,7 @@
               <option value="unsent">Nie wysłano</option>
             </select>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label for="sortSelect" class="form-label">Sortowanie:</label>
             <select id="sortSelect" class="form-select">
               <option value="nameAsc">Nazwisko (A-Z)</option>
@@ -121,6 +130,10 @@
               <option value="statusDesc">Status (Nie wysłano -> Wysłano)</option>
             </select>
           </div>
+        </div>
+
+        <div class="d-flex justify-content-end mb-3">
+          <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
         </div>
 
         <!-- Tabela -->
@@ -140,9 +153,15 @@
       // Obsługa dodawania nowego użytkownika
       document.getElementById("addUserForm").addEventListener("submit", onAddUser);
 
+      // Obsługa wyszukiwania
+      document.getElementById("searchInput").addEventListener("input", renderUsersTable);
+
       // Obsługa filtrów i sortowania
       document.getElementById("statusFilter").addEventListener("change", renderUsersTable);
       document.getElementById("sortSelect").addEventListener("change", renderUsersTable);
+
+      // Obsługa resetu statusów
+      document.getElementById("resetBtn").addEventListener("click", onResetStatus);
 
       // Pierwsze wyświetlenie danych w tabeli
       renderUsersTable();
@@ -153,29 +172,58 @@
       const name = document.getElementById("newUserName").value.trim();
       if (!name) return alert("Podaj imię i nazwisko!");
 
-      const res = await fetch("/add-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name })
-      });
+      try {
+        const res = await fetch("/add-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
 
-      if (res.ok) {
-        alert("Użytkownik dodany!");
-        loadAdminPanel(); // ponowne pobranie i odświeżenie
-      } else {
-        alert("Błąd przy dodawaniu użytkownika.");
+        if (res.ok) {
+          alert("Użytkownik dodany!");
+          loadAdminPanel(); // ponowne pobranie i odświeżenie
+        } else {
+          alert("Błąd przy dodawaniu użytkownika.");
+        }
+      } catch (err) {
+        alert("Błąd fetch /add-user");
+        console.error(err);
+      }
+    }
+
+    async function onResetStatus() {
+      if (!confirm("Na pewno zresetować statusy (z Wysłano na Nie wysłano)?")) return;
+      try {
+        // Domyślnie zakładamy, że istnieje endpoint /reset-status
+        // Jeśli nie, możesz to załatwić lokalnie -> localResetStatus()
+        const res = await fetch("/reset-status", { method: "POST" });
+        if (res.ok) {
+          alert("Statusy zresetowane!");
+          loadAdminPanel();
+        } else {
+          alert("Błąd przy resetowaniu statusów.");
+        }
+      } catch (err) {
+        alert("Błąd fetch /reset-status");
+        console.error(err);
       }
     }
 
     function renderUsersTable() {
       // Pobieramy wybrane opcje z filtrów
       const filterVal = document.getElementById("statusFilter").value;
-      const sortVal = document.getElementById("sortSelect").value;
+      const sortVal   = document.getElementById("sortSelect").value;
+      const searchVal = document.getElementById("searchInput").value.trim().toLowerCase();
 
       // Kopia naszych danych
       let filtered = [...allUsers];
 
-      // 1) Filtrowanie
+      // 1) Wyszukiwanie
+      if (searchVal) {
+        filtered = filtered.filter(u => u.name.toLowerCase().includes(searchVal));
+      }
+
+      // 2) Filtrowanie po statusie
       if (filterVal === "sent") {
         filtered = filtered.filter(u => u.sent);
       } else if (filterVal === "unsent") {
@@ -183,7 +231,7 @@
       }
       // "all" - nie filtrujemy
 
-      // 2) Sortowanie
+      // 3) Sortowanie
       if (sortVal === "nameAsc") {
         filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
       } else if (sortVal === "nameDesc") {
@@ -214,6 +262,14 @@
         tbody.appendChild(tr);
       });
     }
+
+    // ================== ALTERNATYWNE: reset lokalny ==================
+    // Jeśli nie masz /reset-status na serwerze, możesz to zrobić tak:
+    // function localResetStatus() {
+    //   allUsers.forEach(u => u.sent = false);
+    //   renderUsersTable();
+    // }
+
   </script>
 </body>
 </html>
