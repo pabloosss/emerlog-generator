@@ -106,7 +106,7 @@
         renderUsersPanel();
       }
 
-      // Panel Użytkowników – pokazuje tylko osoby, które nie wysłały maila
+      // Panel Użytkowników – zawiera formularz dodawania oraz pasek filtrów i sortowania
       function renderUsersPanel(){
         const html = `
           <h3 class="mb-4">Panel Użytkowników</h3>
@@ -121,11 +121,30 @@
               </div>
             </div>
           </form>
+          <!-- Pasek filtrów i sortowania -->
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <input type="text" id="searchInput" class="form-control" placeholder="Szukaj po imieniu">
+            </div>
+            <div class="col-md-4">
+              <select id="statusFilter" class="form-select">
+                <option value="all">Wszystkie</option>
+                <option value="sent">Wysłano</option>
+                <option value="unsent">Nie wysłano</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <select id="sortSelect" class="form-select">
+                <option value="nameAsc">A-Z</option>
+                <option value="nameDesc">Z-A</option>
+              </select>
+            </div>
+          </div>
           <div class="d-flex justify-content-end mb-3">
             <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
             <button id="deleteAllBtn" class="btn btn-danger ms-2">Usuń wszystkich</button>
           </div>
-          <!-- Tabela użytkowników – wyświetlamy tylko tych, którzy nie wysłali maila -->
+          <!-- Tabela użytkowników -->
           <table class="table table-bordered" id="usersTable">
             <thead class="table-light">
               <tr>
@@ -141,6 +160,10 @@
         document.getElementById("addUserForm").addEventListener("submit", onAddUser);
         document.getElementById("resetBtn").addEventListener("click", onResetStatus);
         document.getElementById("deleteAllBtn").addEventListener("click", onDeleteAllUsers);
+        // Dodajemy obsługę zdarzeń do elementów filtrujących/sortujących
+        document.getElementById("searchInput").addEventListener("input", renderUsersTable);
+        document.getElementById("statusFilter").addEventListener("change", renderUsersTable);
+        document.getElementById("sortSelect").addEventListener("change", renderUsersTable);
         renderUsersTable();
       }
 
@@ -236,12 +259,36 @@
         }
       }
 
-      // Renderowanie tabeli użytkowników – w zakładce "Użytkownicy" wyświetlamy tylko osoby, które mają status "Nie wysłano"
+      // Renderowanie tabeli użytkowników z uwzględnieniem filtrów i sortowania
       function renderUsersTable(){
+        let filtered = [...allUsers];
+        // Pobierz wartości filtrów i sortowania
+        const searchValue = document.getElementById("searchInput").value.trim().toLowerCase();
+        const statusValue = document.getElementById("statusFilter").value;
+        const sortValue = document.getElementById("sortSelect").value;
+        
+        // Filtruj po wyszukiwaniu
+        if(searchValue) {
+          filtered = filtered.filter(u => u.name.toLowerCase().includes(searchValue));
+        }
+        
+        // Filtruj po statusie
+        if(statusValue === "sent") {
+          filtered = filtered.filter(u => u.sent);
+        } else if(statusValue === "unsent") {
+          filtered = filtered.filter(u => !u.sent);
+        }
+        
+        // Sortowanie alfabetyczne
+        if(sortValue === "nameAsc") {
+          filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
+        } else if(sortValue === "nameDesc") {
+          filtered.sort((a, b) => b.name.localeCompare(a.name, "pl"));
+        }
+        
         const tbody = document.querySelector("#usersTable tbody");
         tbody.innerHTML = "";
-        const pendingUsers = allUsers.filter(user => !user.sent);
-        pendingUsers.forEach(user => {
+        filtered.forEach(user => {
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>${user.name}</td>
