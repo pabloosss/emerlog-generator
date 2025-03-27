@@ -49,7 +49,7 @@ app.post("/send-docx", async (req, res) => {
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: "pawel.ruchlicki@emerlog.eu",
+      to: "ewa.dusinska@emerlog.eu",
       subject: `Rozliczenie godzin (DOCX) - ${name}`,
       text: "W załączniku przesyłamy plik Word z harmonogramem.",
       attachments: [
