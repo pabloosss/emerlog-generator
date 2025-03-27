@@ -40,7 +40,6 @@
       padding: 20px;
       margin-bottom: 30px;
     }
-    /* Układ ogólny */
     .form-group.required .form-label:after {
       content: "*";
       color: red;
@@ -79,13 +78,13 @@
       background-color: #e0e0e0;
       font-weight: bold;
     }
-    /* Dni wolne - kolor tła #ffcccc, tekst #a00, pogrubione */
+    /* Dni wolne: czerwone tło, ciemnoczerwony tekst, pogrubienie */
     .final-table .holiday td {
       background-color: #ffcccc;
       color: #a00;
       font-weight: bold;
     }
-    /* Spinner wyświetlany podczas wysyłania e-maila */
+    /* Spinner - ukryty na start */
     #sendingSpinner {
       display: none;
       text-align: center;
@@ -368,24 +367,7 @@
     }
   }
 
-  function checkCustomHoliday(day,month,year){
-    var dd=String(day).padStart(2,'0');
-    var mm=String(month).padStart(2,'0');
-    var yyyy=String(year).padStart(4,'0');
-    var fullDate=yyyy+"-"+mm+"-"+dd;
-    return window.customHolidays.find(function(x){ return x.date===fullDate;})||null;
-  }
-  function isFixedHoliday(day,month){
-    var dd=String(day).padStart(2,'0');
-    var mm=String(month).padStart(2,'0');
-    return fixedHolidays.includes(dd+"-"+mm);
-  }
-  function isWeekend(dObj){
-    var dw=dObj.getDay();
-    return (dw===0||dw===6);
-  }
-
-  // Nowa implementacja rozdzielania godzin (4 - 12h)
+  // Rozdział godzin: min 4h, max 12h dziennie
   function distributeHours(totalHours, daysCount) {
     const MIN_DAY = 4;
     const MAX_DAY = 12;
@@ -559,7 +541,7 @@
           <td>-</td>
         </tr>`;
       } else {
-        // Kolorujemy na czerwono (patrz .holiday w CSS)
+        // Kolorowanie .holiday w CSS => tło i tekst czerwony
         var shownHoliday = (inf.holidayType === "Losowy dzień wolny") ? "-" : (inf.holidayType || "-");
         return `<tr class="holiday">
           <td>${inf.day}</td>
@@ -621,9 +603,12 @@
     try{
       var jsPDF=window.jspdf.jsPDF;
       var pdf=new jsPDF("portrait","pt","a4");
+      var margin=20;
+
       var pageWidth=pdf.internal.pageSize.getWidth();
       var pageHeight=pdf.internal.pageSize.getHeight();
 
+      // Logo
       var logoURL="https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
       var logoImg=new Image();
       logoImg.crossOrigin="Anonymous";
@@ -635,10 +620,10 @@
       if(!desiredLogoHeight || desiredLogoHeight<=0 || isNaN(desiredLogoHeight)){
         desiredLogoHeight=50;
       }
-      // Dodajemy logo w lewym górnym rogu
-      pdf.addImage(logoImg,"PNG",20,20,desiredLogoWidth,desiredLogoHeight);
+      // Dodajemy logo w lewym górnym rogu – np. x=margin, y=margin
+      pdf.addImage(logoImg,"PNG",margin,margin,desiredLogoWidth,desiredLogoHeight);
 
-      // Zrzut tabeli
+      // Tabela
       var outputEl=document.getElementById("output");
       if(!outputEl){
         alert("Brak elementu #output do wygenerowania PDF.");
@@ -650,15 +635,21 @@
         useCORS:true,
         allowTaint:false
       });
-      // Tworzymy obraz i zachowujemy proporcje
-      var tableImg=canvas.toDataURL("image/png");
 
-      var ratio=Math.min((pageWidth / canvas.width), (pageHeight / canvas.height));
+      var tableImg=canvas.toDataURL("image/png");
+      // Dostępny prostokąt (po uwzględnieniu marginesów i miejsca na logo):
+      // np. odejmujemy 2*margins w szerokości i w wysokości
+      // + ewentualnie offset logo, ale na prośbę "prawie całą stronę" pomijam zbyt finezyjne podejście
+      var availableWidth=pageWidth - 2*margin;
+      var availableHeight=pageHeight - 2*margin;
+
+      var ratio=Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
       var finalW=canvas.width*ratio;
       var finalH=canvas.height*ratio;
 
-      var posX=(pageWidth-finalW)/2;
-      var posY=(pageHeight-finalH)/2;
+      // Wyśrodkuj w tym prostokącie
+      var posX= margin + (availableWidth - finalW)/2;
+      var posY= margin + (availableHeight - finalH)/2;
 
       pdf.addImage(tableImg,"PNG",posX,posY,finalW,finalH);
       pdf.save("Tabela_Godzinowa_Pion.pdf");
@@ -678,6 +669,8 @@
 
     var jsPDF=window.jspdf.jsPDF;
     var pdf=new jsPDF("portrait","pt","a4");
+
+    var margin=20;
     var pageWidth=pdf.internal.pageSize.getWidth();
     var pageHeight=pdf.internal.pageSize.getHeight();
 
@@ -694,16 +687,10 @@
         useCORS:true,
         allowTaint:false
       });
+
       var tableImg=canvas.toDataURL("image/png");
 
-      var ratio=Math.min((pageWidth / canvas.width), (pageHeight / canvas.height));
-      var finalW=canvas.width*ratio;
-      var finalH=canvas.height*ratio;
-
-      var posX=(pageWidth-finalW)/2;
-      var posY=(pageHeight-finalH)/2;
-
-      // Logo w lewym górnym rogu
+      // Wstawiamy logo w lewym górnym rogu
       var logoImg=new Image();
       logoImg.crossOrigin="Anonymous";
       logoImg.src="https://lh3.googleusercontent.com/p/AF1QipMLjr7Z89mLaqKXBwtbab8UDG53ccbcEWvGqlpL=s1360-w1360-h1020";
@@ -714,8 +701,18 @@
       if(!desiredLogoHeight||desiredLogoHeight<=0||isNaN(desiredLogoHeight)){
         desiredLogoHeight=50;
       }
+      pdf.addImage(logoImg,"PNG",margin,margin,desiredLogoWidth,desiredLogoHeight);
 
-      pdf.addImage(logoImg,"PNG",20,20,desiredLogoWidth,desiredLogoHeight);
+      var availableWidth=pageWidth - 2*margin;
+      var availableHeight=pageHeight - 2*margin;
+
+      var ratio=Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
+      var finalW=canvas.width * ratio;
+      var finalH=canvas.height * ratio;
+
+      var posX= margin + (availableWidth - finalW)/2;
+      var posY= margin + (availableHeight - finalH)/2;
+
       pdf.addImage(tableImg,"PNG",posX,posY,finalW,finalH);
 
       var pdfBlob=pdf.output("blob");
