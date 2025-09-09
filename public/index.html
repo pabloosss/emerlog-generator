@@ -567,7 +567,7 @@
           arr.sort(function(){ return 0.5 - Math.random(); });
           arr.slice(0,need).forEach(function(dd){
             dd.isWorkingDay=false;
-            dd.holidayType="dzień wolny";
+            dd.holidayType="-";
           });
         }
       });
