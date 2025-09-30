@@ -8,47 +8,100 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const mailDB = path.join(__dirname, "mailDB.json");
 
-const mailDB = path.join(__dirname, "mailDB.json"); // Tylko raz!
-
-// Funkcja zapisu statusu wysłania
+// ===== helpers =====
 function logSentMail(name) {
   let data = [];
-  if (fs.existsSync(mailDB)) {
-    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  }
-  const index = data.findIndex(e => e.name === name);
-  if (index !== -1) data[index].sent = true;
+  if (fs.existsSync(mailDB)) data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
+  const i = data.findIndex(e => e.name === name);
+  if (i !== -1) data[i].sent = true;
   else data.push({ name, sent: true });
   fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
 }
 
-// Middleware
+// Optionalne sprawdzanie API key (jeśli ustawisz w env)
+function requireApiKey(req, res, next) {
+  const expected = process.env.API_KEY;
+  if (!expected) return next();
+  const given = req.header("x-api-key");
+  if (given && given === expected) return next();
+  return res.status(401).json({ error: "Unauthorized" });
+}
+
+// ===== SMTP transporty =====
+const transporter587 = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,          // STARTTLS
+  requireTLS: true,
+  auth: {
+    user: process.env.EMAIL_USER,          // testemerlog2@gmail.com
+    pass: process.env.EMAIL_PASS,          // hasło aplikacji BEZ spacji
+  },
+  connectionTimeout: 20000,
+  greetingTimeout: 20000,
+  socketTimeout: 20000,
+  pool: true,
+  maxConnections: 1,
+});
+
+const transporter465 = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,           // TLS
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  connectionTimeout: 20000,
+  greetingTimeout: 20000,
+  socketTimeout: 20000,
+  pool: true,
+  maxConnections: 1,
+});
+
+async function sendMailSmart(mailOptions) {
+  try {
+    await transporter587.verify();
+    return await transporter587.sendMail(mailOptions);
+  } catch (e1) {
+    console.error("SMTP 587 error:", e1.code || e1.message);
+    await transporter465.verify();
+    return await transporter465.sendMail(mailOptions);
+  }
+}
+
+// ===== middleware =====
 app.use(cors());
 app.use(bodyParser.json({ limit: "100mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Endpoint testowy
-app.get("/test", (req, res) => {
-  res.json({ message: "Serwer działa poprawnie!" });
+// ===== endpoints =====
+app.get("/test", (_req, res) => res.json({ message: "Serwer działa poprawnie!" }));
+
+app.get("/smtp-check", async (_req, res) => {
+  try {
+    await transporter587.verify();
+    return res.send("SMTP 587 OK");
+  } catch (e1) {
+    try {
+      await transporter465.verify();
+      return res.send("SMTP 465 OK");
+    } catch (e2) {
+      return res.status(500).send(`SMTP error: ${e1.code || e1} | ${e2.code || e2}`);
+    }
+  }
 });
 
-// Endpoint: wysyłanie DOCX
-app.post("/send-docx", async (req, res) => {
+// wysyłka DOCX
+app.post("/send-docx", requireApiKey, async (req, res) => {
   try {
     const { name, docxData } = req.body;
     if (!name || !docxData) return res.status(400).json({ error: "Brak danych" });
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_USER,                // musi być ten sam co auth.user
       to: "ewa.dusinska@emerlog.eu",
       subject: `Rozliczenie godzin (DOCX) - ${name}`,
       text: "W załączniku przesyłamy plik Word z harmonogramem.",
@@ -62,9 +115,8 @@ app.post("/send-docx", async (req, res) => {
       ],
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendMailSmart(mailOptions);
     logSentMail(name);
-    console.log("📤 Word wysłany!");
     res.json({ message: "DOCX wysłany OK" });
   } catch (err) {
     console.error("❌ Błąd wysyłki DOCX:", err);
@@ -72,19 +124,11 @@ app.post("/send-docx", async (req, res) => {
   }
 });
 
-// Endpoint: wysyłanie PDF
-app.post("/send-pdf", async (req, res) => {
+// wysyłka PDF
+app.post("/send-pdf", requireApiKey, async (req, res) => {
   try {
     const { name, pdfData } = req.body;
     if (!name || !pdfData) return res.status(400).json({ error: "Brak danych" });
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -100,9 +144,8 @@ app.post("/send-pdf", async (req, res) => {
       ],
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendMailSmart(mailOptions);
     logSentMail(name);
-    console.log("📤 PDF wysłany!");
     res.json({ message: "PDF wysłany OK" });
   } catch (err) {
     console.error("❌ Błąd wysyłki PDF:", err);
@@ -110,60 +153,38 @@ app.post("/send-pdf", async (req, res) => {
   }
 });
 
-// Endpoint: pobierz dane admina
-app.get("/admin-data", (req, res) => {
-  if (fs.existsSync(mailDB)) {
-    const data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-    return res.json(data);
-  }
+// admin data
+app.get("/admin-data", (_req, res) => {
+  if (fs.existsSync(mailDB)) return res.json(JSON.parse(fs.readFileSync(mailDB, "utf8")));
   return res.json([]);
 });
 
-// Endpoint: dodaj użytkownika do listy
 app.post("/add-user", (req, res) => {
   const { name, manual } = req.body;
   if (!name) return res.status(400).send("Brak imienia");
-
   let data = [];
-  if (fs.existsSync(mailDB)) {
-    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  }
-
-  // Dodajemy tylko, jeśli użytkownik jeszcze nie istnieje
+  if (fs.existsSync(mailDB)) data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
   if (!data.find(e => e.name === name)) {
-    // Jeśli dodany ręcznie (manual === true), ustawiamy sent: true
-    data.push({ name, sent: manual ? true : false });
+    data.push({ name, sent: !!manual });
     fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
   }
-
   res.sendStatus(200);
 });
 
-// Endpoint: usuwanie pojedynczego użytkownika
 app.post("/remove-user", (req, res) => {
-  const { id } = req.body; // Zakładamy, że 'id' to nazwa użytkownika
+  const { id } = req.body;
   if (!id) return res.status(400).send("Brak identyfikatora użytkownika");
-
   let data = [];
-  if (fs.existsSync(mailDB)) {
-    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  }
-
+  if (fs.existsSync(mailDB)) data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
   const newData = data.filter(e => e.name !== id);
   fs.writeFileSync(mailDB, JSON.stringify(newData, null, 2));
-
-  console.log(`Usunięto użytkownika: ${id}`);
   res.sendStatus(200);
 });
 
-// Endpoint: usuwanie wszystkich użytkowników
-app.post("/remove-all-users", (req, res) => {
+app.post("/remove-all-users", (_req, res) => {
   fs.writeFileSync(mailDB, JSON.stringify([], null, 2));
-  console.log("Usunięto wszystkich użytkowników");
   res.sendStatus(200);
 });
 
-// Start serwera
-app.listen(PORT, () => {
-  console.log(`🚀 Serwer działa na porcie ${PORT}`);
-});
+// start
+app.listen(PORT, () => console.log(`🚀 Serwer działa na porcie ${PORT}`));
