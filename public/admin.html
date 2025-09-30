@@ -1,316 +1,39 @@
-<!DOCTYPE html> 
-<html lang="pl">
-<head>
-  <meta charset="UTF-8">
-  <title>Panel Administratora</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Bootstrap JS + Popper.js -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; background-color: #f9f9f9; }
-    .container { margin-top: 30px; margin-bottom: 30px; max-width: 1000px; }
-    .text-center h2 { margin-bottom: 20px; }
-    table.table { margin-top: 20px; }
-  </style>
-</head>
-<body>
-  <div class="container mt-5">
-    <div class="text-center">
-      <h2>Panel Administratora</h2>
-      <!-- Przycisk logowania admina -->
-      <button id="adminPanelBtn" class="btn btn-warning mt-3">Zaloguj jako Admin</button>
-      <!-- Przycisk powrotu na stronę główną -->
-      <button id="goHomeBtn" class="btn btn-secondary mt-3">Powrót do strony głównej</button>
-    </div>
-    <!-- Miejsce na dynamiczny kod (formularze, tabele, itp.) -->
-    <div id="output" class="mt-5"></div>
-  </div>
-
-  <!-- Modal logowania -->
-  <div class="modal" id="adminModal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Logowanie Admina</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <input type="text" id="adminLogin" class="form-control mb-2" placeholder="Login">
-          <input type="password" id="adminPass" class="form-control mb-2" placeholder="Hasło">
-          <button id="loginBtn" class="btn btn-primary">Zaloguj</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", function(){
-      // Globalna zmienna – lista użytkowników (wszystkie dane)
-      let allUsers = []; // pobierane z /admin-data
-
-      // Obsługa przycisków logowania i powrotu
-      document.getElementById("adminPanelBtn").addEventListener("click", function(){
-        const modal = new bootstrap.Modal(document.getElementById("adminModal"));
-        modal.show();
-      });
-      document.getElementById("goHomeBtn").addEventListener("click", function(){
-        window.location.href = "/";
-      });
-
-      // Obsługa logowania admina
-      document.getElementById("loginBtn").addEventListener("click", async function(){
-        const login = document.getElementById("adminLogin").value.trim();
-        const pass  = document.getElementById("adminPass").value.trim();
-        if(login === "ewa" && pass === "admin"){
-          alert("Zalogowano jako admin");
-          const adminModalEl = document.getElementById("adminModal");
-          const modal = bootstrap.Modal.getInstance(adminModalEl);
-          modal.hide();
-          loadAdminPanel();
-        } else {
-          alert("Nieprawidłowy login lub hasło");
-        }
-      });
-
-      // Funkcja pobierająca dane z /admin-data
-      async function loadAdminPanel(){
-        try {
-          const res = await fetch("/admin-data");
-          if(!res.ok) {
-            throw new Error("Nieprawidłowa odpowiedź serwera");
-          }
-          const data = await res.json();
-          allUsers = data;
-          renderAdminPanel();
-        } catch(err) {
-          alert("Błąd przy pobieraniu danych (/admin-data).");
-          console.error(err);
-        }
-      }
-
-      // Renderowanie głównego panelu z zakładkami
-      function renderAdminPanel(){
-        const html = `
-          <div class="d-flex justify-content-center mb-3">
-            <button id="usersTab" class="btn btn-primary me-2">Użytkownicy</button>
-            <button id="logsTab" class="btn btn-secondary">Logi</button>
-          </div>
-          <div id="adminContent"></div>
-        `;
-        document.getElementById("output").innerHTML = html;
-        document.getElementById("usersTab").addEventListener("click", renderUsersPanel);
-        document.getElementById("logsTab").addEventListener("click", renderLogsPanel);
-        // Domyślnie pokazujemy zakładkę "Użytkownicy"
-        renderUsersPanel();
-      }
-
-      // Panel Użytkowników – zawiera formularz dodawania, filtry oraz sortowanie
-      function renderUsersPanel(){
-        const html = `
-          <h3 class="mb-4">Panel Użytkowników</h3>
-          <!-- Formularz dodawania nowego użytkownika (dodaje z domyślnym statusem "Nie wysłano") -->
-          <form id="addUserForm" class="mb-4">
-            <div class="row g-2">
-              <div class="col-md-8">
-                <input type="text" id="newUserName" class="form-control" placeholder="Imię i nazwisko" required>
-              </div>
-              <div class="col-md-4">
-                <button type="submit" class="btn btn-success w-100">Dodaj użytkownika</button>
-              </div>
-            </div>
-          </form>
-          <!-- Pasek filtrów i sortowania -->
-          <div class="row mb-3">
-            <div class="col-md-4">
-              <input type="text" id="searchInput" class="form-control" placeholder="Szukaj po imieniu">
-            </div>
-            <div class="col-md-4">
-              <!-- Domyślny filtr ustawiony na "Nie wysłano" -->
-              <select id="statusFilter" class="form-select">
-                <option value="unsent" selected>Nie wysłano</option>
-                <option value="sent">Wysłano</option>
-                <option value="all">Wszystkie</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <select id="sortSelect" class="form-select">
-                <option value="nameAsc">A-Z</option>
-                <option value="nameDesc">Z-A</option>
-              </select>
-            </div>
-          </div>
-          <div class="d-flex justify-content-end mb-3">
-            <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
-            <button id="deleteAllBtn" class="btn btn-danger ms-2">Usuń wszystkich</button>
-          </div>
-          <!-- Tabela użytkowników – domyślnie wyświetlamy tylko tych z sent === false -->
-          <table class="table table-bordered" id="usersTable">
-            <thead class="table-light">
-              <tr>
-                <th>Imię i nazwisko</th>
-                <th>Status</th>
-                <th>Akcje</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        `;
-        document.getElementById("adminContent").innerHTML = html;
-        document.getElementById("addUserForm").addEventListener("submit", onAddUser);
-        document.getElementById("resetBtn").addEventListener("click", onResetStatus);
-        document.getElementById("deleteAllBtn").addEventListener("click", onDeleteAllUsers);
-        document.getElementById("searchInput").addEventListener("input", renderUsersTable);
-        document.getElementById("statusFilter").addEventListener("change", renderUsersTable);
-        document.getElementById("sortSelect").addEventListener("change", renderUsersTable);
-        renderUsersTable();
-      }
-
-      // Panel Logów – pokazuje wszystkie rekordy
-      function renderLogsPanel(){
-        const html = `
-          <h3 class="mb-4">Logi użytkowników</h3>
-          <table class="table table-bordered" id="logsTable">
-            <thead class="table-light">
-              <tr>
-                <th>Imię i nazwisko</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        `;
-        document.getElementById("adminContent").innerHTML = html;
-        renderLogsTable();
-      }
-
-      // Dodawanie użytkownika – przy wysłaniu formularza nie wysyłamy parametru manual, więc domyślnie zapisuje się z sent: false
-      async function onAddUser(e){
-        e.preventDefault();
-        const name = document.getElementById("newUserName").value.trim();
-        if (!name) return alert("Podaj imię i nazwisko!");
-        try {
-          const res = await fetch("/add-user", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            // Nie wysyłamy manual: true – domyślnie użytkownik będzie dodany z sent: false
-            body: JSON.stringify({ name })
-          });
-          if (res.ok) {
-            alert("Użytkownik dodany do użytkowników!");
-            loadAdminPanel();
-          } else {
-            alert("Błąd przy dodawaniu użytkownika.");
-          }
-        } catch(err) {
-          alert("Błąd fetch /add-user");
-          console.error(err);
-        }
-      }
-
-      // Resetowanie statusów użytkowników (ustawia wszystkie na "Nie wysłano")
-      async function onResetStatus(){
-        if(!confirm("Na pewno zresetować statusy (ustawić jako 'Nie wysłano')?")) return;
-        allUsers.forEach(u => u.sent = false);
-        alert("Statusy zresetowane!");
-        const activeTable = document.querySelector("#adminContent table");
-        if(activeTable && activeTable.id === "usersTable") renderUsersTable();
-        else if(activeTable && activeTable.id === "logsTable") renderLogsTable();
-      }
-
-      // Usuwanie pojedynczego użytkownika
-      async function onRemoveUser(userId){
-        if(!confirm("Na pewno usunąć tego użytkownika?")) return;
-        try {
-          const res = await fetch("/remove-user", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ id: userId })
-          });
-          if(res.ok){
-            alert("Użytkownik usunięty!");
-            loadAdminPanel();
-          } else {
-            alert("Błąd przy usuwaniu użytkownika.");
-          }
-        } catch(err) {
-          console.error(err);
-          alert("Błąd przy komunikacji z serwerem.");
-        }
-      }
-
-      // Usuwanie wszystkich użytkowników
-      async function onDeleteAllUsers(){
-        if(!confirm("Na pewno usunąć wszystkich użytkowników? Ta operacja jest nieodwracalna!")) return;
-        try {
-          const res = await fetch("/remove-all-users", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"}
-          });
-          if(res.ok){
-            alert("Wszyscy użytkownicy zostali usunięci!");
-            loadAdminPanel();
-          } else {
-            alert("Błąd przy usuwaniu wszystkich użytkowników.");
-          }
-        } catch(err) {
-          console.error(err);
-          alert("Błąd przy komunikacji z serwerem.");
-        }
-      }
-
-      // Renderowanie tabeli użytkowników z filtrami i sortowaniem – domyślnie wyświetlamy tylko użytkowników z sent === false
-      function renderUsersTable(){
-        let filtered = [...allUsers];
-        const searchValue = document.getElementById("searchInput").value.trim().toLowerCase();
-        const statusValue = document.getElementById("statusFilter").value;
-        const sortValue = document.getElementById("sortSelect").value;
-        
-        if(searchValue) {
-          filtered = filtered.filter(u => u.name.toLowerCase().includes(searchValue));
-        }
-        if(statusValue === "sent") {
-          filtered = filtered.filter(u => u.sent);
-        } else if(statusValue === "unsent") {
-          filtered = filtered.filter(u => !u.sent);
-        }
-        if(sortValue === "nameAsc") {
-          filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
-        } else if(sortValue === "nameDesc") {
-          filtered.sort((a, b) => b.name.localeCompare(a.name, "pl"));
-        }
-        
-        const tbody = document.querySelector("#usersTable tbody");
-        tbody.innerHTML = "";
-        filtered.forEach(user => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${user.name}</td>
-            <td>${user.sent ? "Wysłano" : "Nie wysłano"}</td>
-            <td><button class="btn btn-danger btn-sm" onclick="onRemoveUser('${user.name}')">Usuń</button></td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      // Renderowanie tabeli logów – pokazujemy wszystkie rekordy
-      function renderLogsTable(){
-        const tbody = document.querySelector("#logsTable tbody");
-        tbody.innerHTML = "";
-        allUsers.forEach(user => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${user.name}</td>
-            <td>${user.sent ? "Wysłano" : "Nie wysłano"}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      // Upewnij się, że funkcja onRemoveUser jest dostępna globalnie
-      window.onRemoveUser = onRemoveUser;
-    });
-  </script>
-</body>
-</html>
+<!DOCTYPE html><html lang="pl"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin — Wysłane maile</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+</head><body class="p-4">
+<h3>Admin — Wysłane maile</h3>
+<div class="mb-3">
+  <label class="form-label">API Key</label>
+  <input type="password" id="apiKey" class="form-control" placeholder="Wklej X-API-Key">
+</div>
+<div class="mb-3">
+  <button class="btn btn-primary" id="refresh">Odśwież</button>
+  <button class="btn btn-danger" id="clear">Wyczyść wszystkich</button>
+</div>
+<table class="table table-bordered" id="tbl">
+  <thead><tr><th>Imię i nazwisko</th><th>Sent</th><th>SentAt</th><th>Typ</th><th>Akcja</th></tr></thead>
+  <tbody></tbody>
+</table>
+<script>
+async function call(path, opts={}){
+  const key=document.getElementById("apiKey").value.trim();
+  opts.headers=Object.assign({},opts.headers||{},{"X-API-Key":key,"Content-Type":"application/json"});
+  const r=await fetch(path,opts); if(!r.ok) throw new Error(await r.text()); return r.json().catch(()=>({}));
+}
+async function load(){
+  const data=await call("/admin-data");
+  const tb=document.querySelector("#tbl tbody"); tb.innerHTML="";
+  data.forEach(row=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${row.name}</td><td>${row.sent?"✓":""}</td><td>${row.sentAt||""}</td><td>${row.lastType||""}</td>
+                  <td><button class="btn btn-sm btn-outline-danger">Usuń</button></td>`;
+    tr.querySelector("button").onclick=async()=>{await call("/remove-user",{method:"POST",body:JSON.stringify({id:row.name})});load();};
+    tb.appendChild(tr);
+  });
+}
+document.getElementById("refresh").onclick=load;
+document.getElementById("clear").onclick=async()=>{await call("/remove-all-users",{method:"POST"});load();};
+</script>
+</body></html>
