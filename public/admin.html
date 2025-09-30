@@ -1,169 +1,317 @@
-const express = require("express");
-const path = require("path");
-const fs = require("fs");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const nodemailer = require("nodemailer");
-require("dotenv").config();
+<!DOCTYPE html> 
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Administratora</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap JS + Popper.js -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f9f9f9; }
+    .container { margin-top: 30px; margin-bottom: 30px; max-width: 1000px; }
+    .text-center h2 { margin-bottom: 20px; }
+    table.table { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="text-center">
+      <h2>Panel Administratora</h2>
+      <!-- Przycisk logowania admina -->
+      <button id="adminPanelBtn" class="btn btn-warning mt-3">Zaloguj jako Admin</button>
+      <!-- Przycisk powrotu na stronę główną -->
+      <button id="goHomeBtn" class="btn btn-secondary mt-3">Powrót do strony głównej</button>
+    </div>
+    <!-- Miejsce na dynamiczny kod (formularze, tabele, itp.) -->
+    <div id="output" class="mt-5"></div>
+  </div>
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+  <!-- Modal logowania -->
+  <div class="modal" id="adminModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Logowanie Admina</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="adminLogin" class="form-control mb-2" placeholder="Login">
+          <input type="password" id="adminPass" class="form-control mb-2" placeholder="Hasło">
+          <button id="loginBtn" class="btn btn-primary">Zaloguj</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-const mailDB = path.join(__dirname, "mailDB.json"); // Tylko raz!
+  <script>
+    document.addEventListener("DOMContentLoaded", function(){
+      // Globalna zmienna – lista użytkowników (wszystkie dane)
+      let allUsers = []; // pobierane z /admin-data
 
-// Funkcja zapisu statusu wysłania
-function logSentMail(name) {
-  let data = [];
-  if (fs.existsSync(mailDB)) {
-    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  }
-  const index = data.findIndex(e => e.name === name);
-  if (index !== -1) data[index].sent = true;
-  else data.push({ name, sent: true });
-  fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
-}
+      // Obsługa przycisków logowania i powrotu
+      document.getElementById("adminPanelBtn").addEventListener("click", function(){
+        const modal = new bootstrap.Modal(document.getElementById("adminModal"));
+        modal.show();
+      });
+      document.getElementById("goHomeBtn").addEventListener("click", function(){
+        window.location.href = "/";
+      });
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json({ limit: "100mb" }));
-app.use(express.static(path.join(__dirname, "public")));
+      // Obsługa logowania admina
+      document.getElementById("loginBtn").addEventListener("click", async function(){
+        const login = document.getElementById("adminLogin").value.trim();
+        const pass  = document.getElementById("adminPass").value.trim();
+        if(login === "ewa" && pass === "admin"){
+          alert("Zalogowano jako admin");
+          const adminModalEl = document.getElementById("adminModal");
+          const modal = bootstrap.Modal.getInstance(adminModalEl);
+          modal.hide();
+          loadAdminPanel();
+        } else {
+          alert("Nieprawidłowy login lub hasło");
+        }
+      });
 
-// Endpoint testowy
-app.get("/test", (req, res) => {
-  res.json({ message: "Serwer działa poprawnie!" });
-});
+      // Funkcja pobierająca dane z /admin-data
+      async function loadAdminPanel(){
+        try {
+          const res = await fetch("/admin-data");
+          if(!res.ok) {
+            throw new Error("Nieprawidłowa odpowiedź serwera");
+          }
+          const data = await res.json();
+          allUsers = data;
+          renderAdminPanel();
+        } catch(err) {
+          alert("Błąd przy pobieraniu danych (/admin-data).");
+          console.error(err);
+        }
+      }
 
-// Endpoint: wysyłanie DOCX
-app.post("/send-docx", async (req, res) => {
-  try {
-    const { name, docxData } = req.body;
-    if (!name || !docxData) return res.status(400).json({ error: "Brak danych" });
+      // Renderowanie głównego panelu z zakładkami
+      function renderAdminPanel(){
+        const html = `
+          <div class="d-flex justify-content-center mb-3">
+            <button id="usersTab" class="btn btn-primary me-2">Użytkownicy</button>
+            <button id="logsTab" class="btn btn-secondary">Logi</button>
+          </div>
+          <div id="adminContent"></div>
+        `;
+        document.getElementById("output").innerHTML = html;
+        document.getElementById("usersTab").addEventListener("click", renderUsersPanel);
+        document.getElementById("logsTab").addEventListener("click", renderLogsPanel);
+        // Domyślnie pokazujemy zakładkę "Użytkownicy"
+        renderUsersPanel();
+      }
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+      // Panel Użytkowników – zawiera formularz dodawania, filtry oraz sortowanie
+      function renderUsersPanel(){
+        const html = `
+          <h3 class="mb-4">Panel Użytkowników</h3>
+          <!-- Formularz dodawania nowego użytkownika (dodaje do logów, czyli status "Wysłano") -->
+          <form id="addUserForm" class="mb-4">
+            <div class="row g-2">
+              <div class="col-md-8">
+                <input type="text" id="newUserName" class="form-control" placeholder="Imię i nazwisko" required>
+              </div>
+              <div class="col-md-4">
+                <button type="submit" class="btn btn-success w-100">Dodaj użytkownika</button>
+              </div>
+            </div>
+          </form>
+          <!-- Pasek filtrów i sortowania -->
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <input type="text" id="searchInput" class="form-control" placeholder="Szukaj po imieniu">
+            </div>
+            <div class="col-md-4">
+              <!-- Ustawiamy domyślnie wybrany filtr na "Nie wysłano" -->
+              <select id="statusFilter" class="form-select">
+                <option value="unsent" selected>Nie wysłano</option>
+                <option value="sent">Wysłano</option>
+                <option value="all">Wszystkie</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <select id="sortSelect" class="form-select">
+                <option value="nameAsc">A-Z</option>
+                <option value="nameDesc">Z-A</option>
+              </select>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end mb-3">
+            <button id="resetBtn" class="btn btn-danger">Resetuj statusy</button>
+            <button id="deleteAllBtn" class="btn btn-danger ms-2">Usuń wszystkich</button>
+          </div>
+          <!-- Tabela użytkowników – domyślnie wyświetlamy tylko tych z sent === false -->
+          <table class="table table-bordered" id="usersTable">
+            <thead class="table-light">
+              <tr>
+                <th>Imię i nazwisko</th>
+                <th>Status</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        `;
+        document.getElementById("adminContent").innerHTML = html;
+        document.getElementById("addUserForm").addEventListener("submit", onAddUser);
+        document.getElementById("resetBtn").addEventListener("click", onResetStatus);
+        document.getElementById("deleteAllBtn").addEventListener("click", onDeleteAllUsers);
+        document.getElementById("searchInput").addEventListener("input", renderUsersTable);
+        document.getElementById("statusFilter").addEventListener("change", renderUsersTable);
+        document.getElementById("sortSelect").addEventListener("change", renderUsersTable);
+        renderUsersTable();
+      }
+
+      // Panel Logów – pokazuje wszystkie rekordy
+      function renderLogsPanel(){
+        const html = `
+          <h3 class="mb-4">Logi użytkowników</h3>
+          <table class="table table-bordered" id="logsTable">
+            <thead class="table-light">
+              <tr>
+                <th>Imię i nazwisko</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        `;
+        document.getElementById("adminContent").innerHTML = html;
+        renderLogsTable();
+      }
+
+      // Dodawanie użytkownika – przy wysłaniu formularza wysyłamy parametr manual: true
+      async function onAddUser(e){
+        e.preventDefault();
+        const name = document.getElementById("newUserName").value.trim();
+        if (!name) return alert("Podaj imię i nazwisko!");
+        try {
+          const res = await fetch("/add-user", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name, manual: true })
+          });
+          if (res.ok) {
+            alert("Użytkownik dodany do logów!");
+            loadAdminPanel();
+          } else {
+            alert("Błąd przy dodawaniu użytkownika.");
+          }
+        } catch(err) {
+          alert("Błąd fetch /add-user");
+          console.error(err);
+        }
+      }
+
+      // Resetowanie statusów użytkowników (ustawia wszystkie na "Nie wysłano")
+      async function onResetStatus(){
+        if(!confirm("Na pewno zresetować statusy (ustawić jako 'Nie wysłano')?")) return;
+        allUsers.forEach(u => u.sent = false);
+        alert("Statusy zresetowane!");
+        const activeTable = document.querySelector("#adminContent table");
+        if(activeTable && activeTable.id === "usersTable") renderUsersTable();
+        else if(activeTable && activeTable.id === "logsTable") renderLogsTable();
+      }
+
+      // Usuwanie pojedynczego użytkownika
+      async function onRemoveUser(userId){
+        if(!confirm("Na pewno usunąć tego użytkownika?")) return;
+        try {
+          const res = await fetch("/remove-user", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ id: userId })
+          });
+          if(res.ok){
+            alert("Użytkownik usunięty!");
+            loadAdminPanel();
+          } else {
+            alert("Błąd przy usuwaniu użytkownika.");
+          }
+        } catch(err) {
+          console.error(err);
+          alert("Błąd przy komunikacji z serwerem.");
+        }
+      }
+
+      // Usuwanie wszystkich użytkowników
+      async function onDeleteAllUsers(){
+        if(!confirm("Na pewno usunąć wszystkich użytkowników? Ta operacja jest nieodwracalna!")) return;
+        try {
+          const res = await fetch("/remove-all-users", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"}
+          });
+          if(res.ok){
+            alert("Wszyscy użytkownicy zostali usunięci!");
+            loadAdminPanel();
+          } else {
+            alert("Błąd przy usuwaniu wszystkich użytkowników.");
+          }
+        } catch(err) {
+          console.error(err);
+          alert("Błąd przy komunikacji z serwerem.");
+        }
+      }
+
+      // Renderowanie tabeli użytkowników z filtrami i sortowaniem – domyślnie wyświetlamy tylko użytkowników z sent === false
+      function renderUsersTable(){
+        let filtered = [...allUsers];
+        const searchValue = document.getElementById("searchInput").value.trim().toLowerCase();
+        const statusValue = document.getElementById("statusFilter").value;
+        const sortValue = document.getElementById("sortSelect").value;
+        
+        if(searchValue) {
+          filtered = filtered.filter(u => u.name.toLowerCase().includes(searchValue));
+        }
+        if(statusValue === "sent") {
+          filtered = filtered.filter(u => u.sent);
+        } else if(statusValue === "unsent") {
+          filtered = filtered.filter(u => !u.sent);
+        } else if(statusValue === "all"){
+          // pozostawiamy bez filtrowania
+        }
+        if(sortValue === "nameAsc") {
+          filtered.sort((a, b) => a.name.localeCompare(b.name, "pl"));
+        } else if(sortValue === "nameDesc") {
+          filtered.sort((a, b) => b.name.localeCompare(a.name, "pl"));
+        }
+        
+        const tbody = document.querySelector("#usersTable tbody");
+        tbody.innerHTML = "";
+        filtered.forEach(user => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${user.name}</td>
+            <td>${user.sent ? "Wysłano" : "Nie wysłano"}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="onRemoveUser('${user.name}')">Usuń</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Renderowanie tabeli logów – pokazujemy wszystkie rekordy
+      function renderLogsTable(){
+        const tbody = document.querySelector("#logsTable tbody");
+        tbody.innerHTML = "";
+        allUsers.forEach(user => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${user.name}</td>
+            <td>${user.sent ? "Wysłano" : "Nie wysłano"}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Upewnij się, że funkcja onRemoveUser jest dostępna globalnie
+      window.onRemoveUser = onRemoveUser;
     });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: "ewa.dusinska@emerlog.eu",
-      subject: `Rozliczenie godzin (DOCX) - ${name}`,
-      text: "W załączniku przesyłamy plik Word z harmonogramem.",
-      attachments: [
-        {
-          filename: "harmonogram.docx",
-          content: Buffer.from(docxData, "base64"),
-          contentType:
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        },
-      ],
-    };
-
-    await transporter.sendMail(mailOptions);
-    logSentMail(name);
-    console.log("📤 Word wysłany!");
-    res.json({ message: "DOCX wysłany OK" });
-  } catch (err) {
-    console.error("❌ Błąd wysyłki DOCX:", err);
-    res.status(500).json({ error: "Błąd wysyłki DOCX" });
-  }
-});
-
-// Endpoint: wysyłanie PDF
-app.post("/send-pdf", async (req, res) => {
-  try {
-    const { name, pdfData } = req.body;
-    if (!name || !pdfData) return res.status(400).json({ error: "Brak danych" });
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: "ewa.dusinska@emerlog.eu",
-      subject: `Rozliczenie godzin (PDF) - ${name}`,
-      text: "W załączniku przesyłamy plik PDF z harmonogramem.",
-      attachments: [
-        {
-          filename: "harmonogram.pdf",
-          content: Buffer.from(pdfData, "base64"),
-          contentType: "application/pdf",
-        },
-      ],
-    };
-
-    await transporter.sendMail(mailOptions);
-    logSentMail(name);
-    console.log("📤 PDF wysłany!");
-    res.json({ message: "PDF wysłany OK" });
-  } catch (err) {
-    console.error("❌ Błąd wysyłki PDF:", err);
-    res.status(500).json({ error: "Błąd wysyłki PDF" });
-  }
-});
-
-// Endpoint: pobierz dane admina
-app.get("/admin-data", (req, res) => {
-  if (fs.existsSync(mailDB)) {
-    const data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-    return res.json(data);
-  }
-  return res.json([]);
-});
-
-// Endpoint: dodaj użytkownika do listy
-app.post("/add-user", (req, res) => {
-  const { name, manual } = req.body;
-  if (!name) return res.status(400).send("Brak imienia");
-
-  let data = [];
-  if (fs.existsSync(mailDB)) {
-    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  }
-
-  // Dodajemy tylko, jeśli użytkownik jeszcze nie istnieje
-  if (!data.find(e => e.name === name)) {
-    // Jeśli dodany ręcznie (manual === true), ustawiamy sent: true
-    data.push({ name, sent: manual ? true : false });
-    fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
-  }
-
-  res.sendStatus(200);
-});
-
-// Endpoint: usuwanie pojedynczego użytkownika
-app.post("/remove-user", (req, res) => {
-  const { id } = req.body; // Zakładamy, że 'id' to nazwa użytkownika
-  if (!id) return res.status(400).send("Brak identyfikatora użytkownika");
-
-  let data = [];
-  if (fs.existsSync(mailDB)) {
-    data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  }
-
-  const newData = data.filter(e => e.name !== id);
-  fs.writeFileSync(mailDB, JSON.stringify(newData, null, 2));
-
-  console.log(`Usunięto użytkownika: ${id}`);
-  res.sendStatus(200);
-});
-
-// Endpoint: usuwanie wszystkich użytkowników
-app.post("/remove-all-users", (req, res) => {
-  fs.writeFileSync(mailDB, JSON.stringify([], null, 2));
-  console.log("Usunięto wszystkich użytkowników");
-  res.sendStatus(200);
-});
-
-// Start serwera
-app.listen(PORT, () => {
-  console.log(`🚀 Serwer działa na porcie ${PORT}`);
-});
+  </script>
+</body>
+</html>
