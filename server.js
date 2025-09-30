@@ -10,22 +10,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const mailDB = path.join(__dirname, "mailDB.json");
 
-// --- ENV sanity ---
-if (!process.env.RESEND_API_KEY) {
-  console.error("Brak RESEND_API_KEY");
-}
+// ENV
+const resend = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
 const EMAIL_TO = process.env.EMAIL_TO || "ewa.dusinska@emerlog.eu";
 const REQUIRE_API_KEY = !!process.env.API_KEY;
 
-// --- Resend ---
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-// --- helpers ---
+// helpers
 function logSentMail(name) {
   let data = [];
   if (fs.existsSync(mailDB)) data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  const i = data.findIndex(e => e.name === name);
+  const i = data.findIndex((e) => e.name === name);
   if (i !== -1) data[i].sent = true;
   else data.push({ name, sent: true });
   fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
@@ -36,12 +31,7 @@ function auth(req, res, next) {
   return res.status(401).json({ error: "Unauthorized" });
 }
 async function sendViaResend({ subject, text, filename, base64 }) {
-  const payload = {
-    from: EMAIL_FROM,
-    to: EMAIL_TO,
-    subject,
-    text,
-  };
+  const payload = { from: EMAIL_FROM, to: EMAIL_TO, subject, text };
   if (filename && base64) {
     payload.attachments = [{ filename, content: Buffer.from(base64, "base64") }];
   }
@@ -50,21 +40,21 @@ async function sendViaResend({ subject, text, filename, base64 }) {
   return data;
 }
 
-// --- middleware ---
+// middleware
 app.use(cors());
 app.use(bodyParser.json({ limit: "100mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- endpoints ---
+// health
 app.get("/test", (_req, res) => res.json({ message: "Serwer działa" }));
 
-// prosta diagnostyka bez załącznika
+// debug: bez załącznika
 app.get("/debug/mail", async (_req, res) => {
   try {
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: EMAIL_TO,
-      subject: "Test Emerlog (bez załącznika)",
+      subject: "Test (bez załącznika)",
       text: "Ping z /debug/mail",
     });
     if (error) return res.status(500).send(error.message || String(error));
@@ -75,14 +65,14 @@ app.get("/debug/mail", async (_req, res) => {
   }
 });
 
-// diagnostyka z małym załącznikiem
+// debug: mały załącznik
 app.get("/debug/mail-attach", async (_req, res) => {
   try {
-    const dummy = Buffer.from("Hello PDF", "utf8");
+    const dummy = Buffer.from("Hello", "utf8");
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: EMAIL_TO,
-      subject: "Test Emerlog (załącznik)",
+      subject: "Test (załącznik)",
       text: "Ping z /debug/mail-attach",
       attachments: [{ filename: "test.txt", content: dummy }],
     });
@@ -94,6 +84,7 @@ app.get("/debug/mail-attach", async (_req, res) => {
   }
 });
 
+// wysyłka PDF
 app.post("/send-pdf", auth, async (req, res) => {
   try {
     const { name, pdfData } = req.body;
@@ -107,14 +98,14 @@ app.post("/send-pdf", auth, async (req, res) => {
     logSentMail(name);
     res.json({ message: "PDF wysłany OK" });
   } catch (err) {
-    // szczegóły do loga i do klienta
     const msg = err?.message || String(err);
     const code = err?.statusCode || 500;
-    console.error("❌ Resend PDF error:", code, msg, err?.name);
+    console.error("❌ Resend PDF error:", code, msg);
     res.status(500).json({ error: "Błąd wysyłki PDF", detail: msg, code });
   }
 });
 
+// wysyłka DOCX
 app.post("/send-docx", auth, async (req, res) => {
   try {
     const { name, docxData } = req.body;
@@ -130,7 +121,7 @@ app.post("/send-docx", auth, async (req, res) => {
   } catch (err) {
     const msg = err?.message || String(err);
     const code = err?.statusCode || 500;
-    console.error("❌ Resend DOCX error:", code, msg, err?.name);
+    console.error("❌ Resend DOCX error:", code, msg);
     res.status(500).json({ error: "Błąd wysyłki DOCX", detail: msg, code });
   }
 });
@@ -145,7 +136,7 @@ app.post("/add-user", (req, res) => {
   if (!name) return res.status(400).send("Brak imienia");
   let data = [];
   if (fs.existsSync(mailDB)) data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  if (!data.find(e => e.name === name)) {
+  if (!data.find((e) => e.name === name)) {
     data.push({ name, sent: !!manual });
     fs.writeFileSync(mailDB, JSON.stringify(data, null, 2));
   }
@@ -156,7 +147,7 @@ app.post("/remove-user", (req, res) => {
   if (!id) return res.status(400).send("Brak identyfikatora");
   let data = [];
   if (fs.existsSync(mailDB)) data = JSON.parse(fs.readFileSync(mailDB, "utf8"));
-  fs.writeFileSync(mailDB, JSON.stringify(data.filter(e => e.name !== id), null, 2));
+  fs.writeFileSync(mailDB, JSON.stringify(data.filter((e) => e.name !== id), null, 2));
   res.sendStatus(200);
 });
 app.post("/remove-all-users", (_req, res) => {
