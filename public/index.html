@@ -76,7 +76,7 @@
           </div>
 
           <small class="form-text" id="hoursHint">
-            Zlecenie: 4–14 h/dzień. W „Niepełnym miesiącu” 1–14 h/dzień.
+            Zlecenie: 4–16 h/dzień. W „Niepełnym miesiącu” 1–16 h/dzień.
           </small>
         </div>
       </div>
@@ -107,7 +107,7 @@
           <div class="invalid-feedback">Podaj rok (np. 2025).</div>
         </div>
         <div class="col-md-4 mb-3">
-          <small class="form-text">Start ≥ 6:00, koniec ≤ 20:00.</small>
+          <small class="form-text">Start ≥ 6:00, koniec ≤ 22:00.</small>
         </div>
       </div>
 
@@ -163,9 +163,7 @@
 <script>
 (function(){
   "use strict";
-  console.log("Start: zlecenie 4–14 h/dzień, partial 1–14 h.");
 
-  // Święta statyczne (jak wcześniej)
   var fixedHolidays = [
     "01-01","06-01","20-04","21-04","01-05","03-05","08-06","19-06",
     "15-08","01-11","11-11","25-12","26-12"
@@ -173,9 +171,9 @@
   var monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
   window.customHolidays = window.customHolidays || [];
 
-  // Limity godzin
-  var MIN_ZL_FULL = 4,  MAX_ZL_FULL = 14; // pełny miesiąc
-  var MIN_ZL_PART = 1,  MAX_ZL_PART = 14; // niepełny miesiąc
+  // Limity zlecenia
+  var MIN_ZL_FULL = 4,  MAX_ZL_FULL = 16; // pełny miesiąc
+  var MIN_ZL_PART = 1,  MAX_ZL_PART = 16; // niepełny miesiąc
 
   function checkCustomHoliday(day, month, year){
     var dd = String(day).padStart(2,'0');
@@ -328,12 +326,13 @@
     return arr;
   }
 
-  // Maksymalizuj liczbę dni roboczych
+  // Użyj maksymalnej liczby dni roboczych, ale nie mniej niż minK
   function chooseWorkDays(totalHours, totalWorkingDays, minPerDay, maxPerDay){
     const minK = Math.ceil(totalHours / maxPerDay);
     const maxK = Math.floor(totalHours / minPerDay);
     if (minK > totalWorkingDays) return null;
-    return Math.min(totalWorkingDays, Math.max(minK, maxK));
+    const k = Math.min(totalWorkingDays, Math.max(minK, Math.min(maxK, totalWorkingDays)));
+    return k;
   }
   function selectEvenIndices(len, k){
     const set = new Set();
@@ -345,7 +344,7 @@
 
   function getRandomInt(mi,ma){ mi=Math.ceil(mi); ma=Math.floor(ma); return (ma<mi)?mi:Math.floor(Math.random()*(ma-mi+1))+mi; }
   function pickStartHour(duration, prevStart){
-    var minStart=6, maxStart=20-duration; if(maxStart<minStart) maxStart=minStart;
+    var minStart=6, maxStart=22-duration; if(maxStart<minStart) maxStart=minStart;
     var chosen=getRandomInt(minStart,maxStart), attempts=0;
     while(attempts<10 && chosen===prevStart && (maxStart>minStart)){ chosen=getRandomInt(minStart,maxStart); attempts++; }
     return chosen;
@@ -355,8 +354,8 @@
     for(var i=0;i<workingDays.length;i++){
       var wd=workingDays[i]; var dur=hoursArr[i];
       var sH=pickStartHour(dur,prevStart);
-      if(sH+dur>20){ sH=Math.max(6,20-dur); }
-      var eH=sH+dur; if(eH>20){ eH=20; sH=eH-dur; if(sH<6) sH=6; }
+      if(sH+dur>22){ sH=Math.max(6,22-dur); }
+      var eH=sH+dur; if(eH>22){ eH=22; sH=eH-dur; if(sH<6) sH=6; }
       wd.hours=dur; wd.start=sH+":00"; wd.end=eH+":00"; prevStart=sH;
     }
     return true;
@@ -431,7 +430,7 @@
         if(!assignTimes(workingDays,hoursArrP)) return;
 
       } else {
-        // Maksymalizuj liczbę dni przy 4–14 h/dzień
+        // Maksymalizuj liczbę dni przy 4–16 h/dzień
         const WDIdx = dayData.map((d,i)=> d.isWorkingDay ? i : -1).filter(i=> i>=0);
         const k = chooseWorkDays(totalHours, WDIdx.length, MIN_ZL_FULL, MAX_ZL_FULL);
         if (k === null){ alert(`Za dużo godzin (${totalHours}) na dostępne dni (${WDIdx.length}).`); return; }
