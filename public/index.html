@@ -76,7 +76,7 @@
           </div>
 
           <small class="form-text" id="hoursHint">
-            Zlecenie: min. 4–10 h/dzień. W „Niepełnym miesiącu” min. 1–10 h/dzień.
+            Zlecenie: 4–8 h/dzień (maks. rozbicie na dni). W „Niepełnym miesiącu” 1–8 h/dzień.
           </small>
         </div>
       </div>
@@ -163,9 +163,9 @@
 <script>
 (function(){
   "use strict";
-  console.log("Start: PDF only, zlecenie max 10 h/dzień i równy rozkład dni.");
+  console.log("Start: PDF only, zlecenie 4–8 h i maksymalna liczba dni.");
 
-  // Stałe święta przykładowe
+  // Święta przykładowe (statyczne jak wcześniej)
   var fixedHolidays = [
     "01-01","06-01","20-04","21-04","01-05","03-05","08-06","19-06",
     "15-08","01-11","11-11","25-12","26-12"
@@ -173,9 +173,9 @@
   var monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
   window.customHolidays = window.customHolidays || [];
 
-  // Parametry zlecenia
-  var MIN_ZL_FULL = 4, MAX_ZL_FULL = 10;    // pełny miesiąc
-  var MIN_ZL_PART = 1, MAX_ZL_PART = 10;    // niepełny miesiąc
+  // Parametry zlecenia – jeszcze większe rozbicie
+  var MIN_ZL_FULL = 4, MAX_ZL_FULL = 8;   // pełny miesiąc: 4–8 h/dzień
+  var MIN_ZL_PART = 1, MAX_ZL_PART = 8;   // niepełny miesiąc: 1–8 h/dzień
 
   function checkCustomHoliday(day, month, year){
     var dd = String(day).padStart(2,'0');
@@ -242,7 +242,10 @@
     if(type==="zlecenie"){
       hoursGroup.style.display="block"; hoursInput.required=true; hoursInput.min="30";
       partialWrap.style.display="block"; onPartialChange();
-      randomH.checked=true; randomH.disabled=true;
+
+      // Więcej dni => NIE wyłączaj automatycznie losowych wolnych
+      randomH.checked=false; randomH.disabled=false;
+
       holidayTypeSelect.innerHTML="";
       ["---","Zwolnienie lekarskie (L4)"].forEach(function(o){
         var opt=document.createElement("option"); opt.value=o; opt.textContent=o; holidayTypeSelect.appendChild(opt);
@@ -328,14 +331,13 @@
     return arr;
   }
 
-  // Dobór liczby dni pracy w zleceniu (pełny miesiąc) tak, by nie przekraczać MAX_DAY
+  // Maksymalnie zwiększ dni: k = maxK
   function chooseWorkDays(totalHours, totalWorkingDays, minPerDay, maxPerDay){
     const minK = Math.ceil(totalHours / maxPerDay);
     const maxK = Math.floor(totalHours / minPerDay);
     if (minK > totalWorkingDays) return null;
-    const ideal = Math.round(totalHours / 8); // cel ~8h/dzień
-    const k = Math.max(minK, Math.min(maxK, ideal));
-    return Math.min(totalWorkingDays, Math.max(minK, k));
+    const k = Math.min(totalWorkingDays, Math.max(minK, maxK)); // bierz maksimum
+    return k;
   }
   function selectEvenIndices(len, k){
     const set = new Set();
@@ -394,7 +396,8 @@
     }
 
     if(contractType==="zlecenie" && addRandom && !isPartial){
-      var pattern=[0,1,3,1,0,0], grouped={};
+      // Uwaga: losowe wolne zmniejsza liczbę dostępnych dni
+      var pattern=[0,1,2,1,0,0], grouped={};
       dayData.forEach(function(it){ var week=Math.floor((it.day-1)/7)+1; if(!grouped[week]) grouped[week]=[]; grouped[week].push(it); });
       Object.keys(grouped).forEach(function(k){
         var arr=grouped[k].filter(function(x){return x.isWorkingDay;});
@@ -433,7 +436,7 @@
         if(!assignTimes(workingDays,hoursArrP)) return;
 
       } else {
-        // Równy wybór k dni tak, aby nie przekroczyć 10h/dzień
+        // Maksymalizuj liczbę dni przy 4–8 h/dzień
         const WDIdx = dayData.map((d,i)=> d.isWorkingDay ? i : -1).filter(i=> i>=0);
         const k = chooseWorkDays(totalHours, WDIdx.length, MIN_ZL_FULL, MAX_ZL_FULL);
         if (k === null){ alert(`Za dużo godzin (${totalHours}) na dostępne dni (${WDIdx.length}).`); return; }
