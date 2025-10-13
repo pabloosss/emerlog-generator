@@ -7,9 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
   <style>
-    :root{
-      --card-radius: 14px;
-    }
+    :root{ --card-radius:14px }
     body{background:#f6f7fb;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;color:#1f2328}
     .container{max-width:1000px}
     header .title{font-weight:700;letter-spacing:.3px}
@@ -19,7 +17,16 @@
     .final-table{width:100%;border-collapse:collapse;margin-top:16px;background:#fff}
     .final-table th,.final-table td{border:1px solid #0e11161a;padding:8px;text-align:center;vertical-align:middle}
     .final-table thead th{background:#f0f3f9;font-weight:600}
-    .final-table .holiday td{background:#fff1f1}
+    /* MOCNE oznaczenie dni wolnych */
+    .final-table .holiday td{
+      background:#ffcccc !important;
+      color:#a00000 !important;
+      font-weight:700;
+      border-top:2px solid #d00000 !important;
+      border-bottom:2px solid #d00000 !important;
+      border-left:2px solid #d00000 !important;
+      border-right:2px solid #d00000 !important;
+    }
     .muted{color:#6c757d}
     footer{color:#6c757d}
     .btn-icon{display:inline-flex;gap:.5rem;align-items:center}
@@ -129,9 +136,9 @@
 
               <div class="form-check mt-2" id="randomHolidaysGroup">
                 <input class="form-check-input" type="checkbox" id="randomHolidays">
-                <label class="form-check-label" for="randomHolidays">Dodaj losowo ok. 35% wolnych (zlecenie)</label>
+                <label class="form-check-label" for="randomHolidays">Losowe dni wolne</label>
               </div>
-              <div class="form-text">„Urlop” w tabeli pokazuje wyłącznie „Święto”. Wszystko inne = „-”.</div>
+              <div class="form-text">„Urlop” w tabeli pokazuje tylko „Święto”. Reszta = „-”.</div>
             </div>
           </div>
 
@@ -156,141 +163,92 @@
   (function(){
     "use strict";
 
-    // Okno pracy i limity
-    const MIN_START = 7, MAX_END = 20;
-    const MIN_ZL_FULL = 4,  MAX_ZL_FULL = 13; // pełny miesiąc
-    const MIN_ZL_PART = 1,  MAX_ZL_PART = 13; // niepełny miesiąc
+    const MIN_START=7, MAX_END=20;
+    const MIN_ZL_FULL=4,  MAX_ZL_FULL=13;
+    const MIN_ZL_PART=1,  MAX_ZL_PART=13;
 
-    const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
-    window.customHolidays = window.customHolidays || [];
+    const monthNames=["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+    window.customHolidays=window.customHolidays||[];
 
-    // ===== Święta PL z obliczeniem Wielkanocy + Boże Ciało =====
     function easterSunday(year){
-      const a=year%19, b=Math.floor(year/100), c=year%100;
-      const d=Math.floor(b/4), e=b%4, f=Math.floor((b+8)/25);
-      const g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30;
-      const i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k)%7;
+      const a=year%19,b=Math.floor(year/100),c=year%100;
+      const d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25);
+      const g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30;
+      const i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7;
       const m=Math.floor((a+11*h+22*l)/451);
       const month=Math.floor((h+l-7*m+114)/31);
       const day=((h+l-7*m+114)%31)+1;
-      return new Date(year, month-1, day);
+      return new Date(year,month-1,day);
     }
-    function addDays(d, n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-    function toISO(d){ return d.toISOString().slice(0,10); }
+    function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+    function toISO(d){return d.toISOString().slice(0,10);}
     function getPolishPublicHolidays(year){
-      const fixed = ["01-01","01-06","05-01","05-03","08-15","11-01","11-11","12-25","12-26"].map(md=> `${year}-${md}`);
-      const easter = easterSunday(year);
-      const easterMon = toISO(addDays(easter,1));   // Poniedziałek Wielkanocny
-      const corpus    = toISO(addDays(easter,60));  // Boże Ciało
-      return new Set([...fixed, easterMon, corpus]);
+      const fixed=["01-01","01-06","05-01","05-03","08-15","11-01","11-11","12-25","12-26"].map(md=>`${year}-${md}`);
+      const easter=easterSunday(year);
+      return new Set([...fixed,toISO(addDays(easter,1)),toISO(addDays(easter,60))]);
     }
+    function isWeekend(d){const w=d.getDay();return w===0||w===6;}
+    function getRandomInt(mi,ma){mi=Math.ceil(mi);ma=Math.floor(ma);return (ma<mi)?mi:Math.floor(Math.random()*(ma-mi+1))+mi;}
+    function pickStartHour(dur,prev){let min=MIN_START,max=MAX_END-dur;if(max<min)max=min;let s=getRandomInt(min,max),t=0;while(t<10&&s===prev&&(max>min)){s=getRandomInt(min,max);t++;}return s;}
+    function assignTimes(days,arr){let prev=null;for(let i=0;i<days.length;i++){const d=days[i],h=arr[i];let s=pickStartHour(h,prev);if(s+h>MAX_END)s=Math.max(MIN_START,MAX_END-h);let e=s+h;if(e>MAX_END){e=MAX_END;s=e-h;if(s<MIN_START)s=MIN_START;}d.hours=h;d.start=s+":00";d.end=e+":00";prev=s;}return true;}
 
-    // ===== Utils =====
-    function isWeekend(dateObj){ const w=dateObj.getDay(); return (w===0||w===6); }
-    function getRandomInt(mi,ma){ mi=Math.ceil(mi); ma=Math.floor(ma); return (ma<mi)?mi:Math.floor(Math.random()*(ma-mi+1))+mi; }
-    function pickStartHour(duration, prevStart){
-      let minStart=MIN_START, maxStart=MAX_END-duration; if(maxStart<minStart) maxStart=minStart;
-      let chosen=getRandomInt(minStart,maxStart), attempts=0;
-      while(attempts<10 && chosen===prevStart && (maxStart>minStart)){ chosen=getRandomInt(minStart,maxStart); attempts++; }
-      return chosen;
-    }
-    function assignTimes(workingDays, hoursArr){
-      let prevStart=null;
-      for(let i=0;i<workingDays.length;i++){
-        const wd=workingDays[i];
-        const dur=hoursArr[i];
-        let sH=pickStartHour(dur,prevStart);
-        if(sH+dur>MAX_END){ sH=Math.max(MIN_START,MAX_END-dur); }
-        let eH=sH+dur; if(eH>MAX_END){ eH=MAX_END; sH=eH-dur; if(sH<MIN_START) sH=MIN_START; }
-        wd.hours=dur; wd.start=sH+":00"; wd.end=eH+":00"; prevStart=sH;
-      }
-      return true;
-    }
-
-    // Więcej wolnych ~35% roboczych (tylko dla zlecenia i bez trybu niepełnego)
     function applyRandomTimeOff(dayData){
-      const workIdx = dayData.map((d,i)=> d.isWorkingDay ? i : -1).filter(i=> i>=0);
-      if(workIdx.length<3) return;
-      let toDrop = Math.max(1, Math.round(workIdx.length*0.35));
-      for(let i=workIdx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [workIdx[i],workIdx[j]]=[workIdx[j],workIdx[i]]; }
-      for(let k=0;k<toDrop;k++){
-        const idx=workIdx[k];
-        if(idx!=null){ dayData[idx].isWorkingDay=false; dayData[idx].holidayType="-"; }
-      }
+      const workIdx=dayData.map((d,i)=>d.isWorkingDay?i:-1).filter(i=>i>=0);
+      if(workIdx.length<3)return;
+      let toDrop=Math.max(1,Math.round(workIdx.length*0.35));
+      for(let i=workIdx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[workIdx[i],workIdx[j]]=[workIdx[j],workIdx[i]];}
+      for(let k=0;k<toDrop;k++){const idx=workIdx[k];if(idx!=null){dayData[idx].isWorkingDay=false;dayData[idx].holidayType="-";}}
     }
 
-    // Rozdział godzin 100% puli w [MIN_DAY, MAX_DAY]
-    function distributeHours(totalHours, daysCount, MIN_DAY, MAX_DAY){
-      if(daysCount===0){ return (totalHours===0)?[]:null; }
-      const minPossible=MIN_DAY*daysCount, maxPossible=MAX_DAY*daysCount;
-      if(totalHours<minPossible){ alert(`Za mało godzin (min. ${minPossible}).`); return null; }
-      if(totalHours>maxPossible){ alert(`Za dużo godzin (max. ${maxPossible}).`); return null; }
-
-      const base=Array(daysCount).fill(MIN_DAY);
-      let remaining=totalHours-minPossible;
-
-      const weights=Array.from({length:daysCount},()=>Math.random());
-      const wsum=weights.reduce((a,b)=>a+b,0)||1;
-      const extra=weights.map(w=>Math.floor(w/wsum*remaining));
-      const allocSum=extra.reduce((a,b)=>a+b,0);
-      let leftover=remaining-allocSum;
-
-      while(leftover>0){
-        const candidates=[];
-        for(let i=0;i<daysCount;i++){ if(base[i]+extra[i]<MAX_DAY) candidates.push(i); }
-        if(!candidates.length) break;
-        const pick=candidates[Math.floor(Math.random()*candidates.length)];
-        extra[pick]++; leftover--;
+    function distributeHours(total,daysCount,MIN_DAY,MAX_DAY){
+      if(daysCount===0)return (total===0)?[]:null;
+      const min=MIN_DAY*daysCount,max=MAX_DAY*daysCount;
+      if(total<min){alert(`Za mało godzin (min. ${min}).`);return null;}
+      if(total>max){alert(`Za dużo godzin (max. ${max}).`);return null;}
+      const arr=Array(daysCount).fill(MIN_DAY);
+      let left=total-min;
+      while(left>0){
+        const cands=[];for(let i=0;i<daysCount;i++) if(arr[i]<MAX_DAY) cands.push(i);
+        if(!cands.length){alert("Nie udało się rozdzielić godzin bez przekroczeń limitu.");return null;}
+        const i=cands[Math.floor(Math.random()*cands.length)];
+        arr[i]++; left--;
       }
-      const arr=base.map((b,i)=>b+extra[i]);
-      for(let s=arr.length-1;s>0;s--){ const j=Math.floor(Math.random()*(s+1)); [arr[s],arr[j]]=[arr[j],arr[s]]; }
+      for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
       return arr;
     }
-
-    // Dobór k dni pracy (pełny miesiąc zlecenie)
-    function chooseWorkDays(totalHours, totalWorkingDays, minPerDay, maxPerDay){
-      const minK = Math.ceil(totalHours / maxPerDay);
-      const maxK = Math.floor(totalHours / minPerDay);
-      if(minK > totalWorkingDays) return null;
-      return Math.min(totalWorkingDays, Math.max(minK, Math.min(maxK, totalWorkingDays)));
+    function chooseWorkDays(total,wd,min,max){
+      const minK=Math.ceil(total/max),maxK=Math.floor(total/min);
+      if(minK>wd)return null;
+      return Math.min(wd, Math.max(minK, Math.min(maxK,wd)));
     }
-    function selectEvenIndices(len, k){
-      const set=new Set(), step=len/k;
-      for(let j=0;j<k;j++){ set.add(Math.min(len-1, Math.round(j*step))); }
-      while(set.size<k){ set.add(Math.floor(Math.random()*len)); }
+    function selectEvenIndices(len,k){
+      const set=new Set(),step=len/k;
+      for(let j=0;j<k;j++) set.add(Math.min(len-1,Math.round(j*step)));
+      while(set.size<k) set.add(Math.floor(Math.random()*len));
       return Array.from(set).sort((a,b)=>a-b);
     }
 
-    // ===== DOM gotowe =====
-    document.addEventListener("DOMContentLoaded", function(){
-      document.querySelectorAll('input[name="contractType"]').forEach(r=> r.addEventListener("change", onContractChange));
-
+    document.addEventListener("DOMContentLoaded",function(){
+      document.querySelectorAll('input[name="contractType"]').forEach(r=>r.addEventListener("change",onContractChange));
       const form=document.getElementById("generatorForm");
-      form.addEventListener("submit", function(e){
+      form.addEventListener("submit",function(e){
         e.preventDefault();
-        if(!form.checkValidity()){ form.classList.add("was-validated"); return; }
+        if(!form.checkValidity()){form.classList.add("was-validated");return;}
         generateTable();
       });
-
-      document.getElementById("addHoliday").addEventListener("click", function(){
-        const selDate=document.getElementById("holidayPicker").value;
-        const holidayType=document.getElementById("holidayTypeSelect").value;
-        if(!selDate){ alert("Wybierz datę."); return; }
-        if(!window.customHolidays.find(x=>x.date===selDate)){
-          window.customHolidays.push({date:selDate,type:holidayType});
-        } else {
-          alert("Ta data już jest dodana.");
-        }
+      document.getElementById("addHoliday").addEventListener("click",function(){
+        const date=document.getElementById("holidayPicker").value;
+        const type=document.getElementById("holidayTypeSelect").value;
+        if(!date){alert("Wybierz datę.");return;}
+        if(!window.customHolidays.find(x=>x.date===date)) window.customHolidays.push({date,type});
+        else alert("Ta data już jest dodana.");
         renderHolidays();
       });
-
-      document.getElementById("month").addEventListener("change", updateRanges);
-      document.getElementById("year").addEventListener("change", updateRanges);
-      document.getElementById("partialMonth").addEventListener("change", onPartialChange);
-      document.getElementById("generatePDF").addEventListener("click", downloadPDF);
-
-      onContractChange();
-      updateRanges();
+      document.getElementById("month").addEventListener("change",updateRanges);
+      document.getElementById("year").addEventListener("change",updateRanges);
+      document.getElementById("partialMonth").addEventListener("change",onPartialChange);
+      document.getElementById("generatePDF").addEventListener("click",downloadPDF);
+      onContractChange();updateRanges();
     });
 
     function onContractChange(){
@@ -299,58 +257,42 @@
       const hoursInput=document.getElementById("hours");
       const partialWrap=document.getElementById("partialMonthWrap");
       const randomGroup=document.getElementById("randomHolidaysGroup");
-
       if(type==="zlecenie"){
-        hoursGroup.style.display="block";
-        hoursInput.required=true; hoursInput.min="30";
-        partialWrap.style.display="block";
-        randomGroup.style.display="block";
-        onPartialChange();
-      } else {
-        hoursGroup.style.display="none";
-        hoursInput.required=false; hoursInput.removeAttribute("min");
+        hoursGroup.style.display="block";hoursInput.required=true;hoursInput.min="30";
+        partialWrap.style.display="block";randomGroup.style.display="block";onPartialChange();
+      }else{
+        hoursGroup.style.display="none";hoursInput.required=false;hoursInput.removeAttribute("min");
         document.getElementById("partialMonth").checked=false;
         document.getElementById("partialMonthStartRow").style.display="none";
-        partialWrap.style.display="none";
-        randomGroup.style.display="none";
+        partialWrap.style.display="none";randomGroup.style.display="none";
       }
     }
-
     function onPartialChange(){
       const isPartial=document.getElementById("partialMonth").checked;
       const hoursInput=document.getElementById("hours");
       const startRow=document.getElementById("partialMonthStartRow");
-      if(isPartial){ hoursInput.removeAttribute("min"); startRow.style.display="block"; }
-      else { hoursInput.min="30"; startRow.style.display="none"; document.getElementById("startDate").value=""; }
+      if(isPartial){hoursInput.removeAttribute("min");startRow.style.display="block";}
+      else{hoursInput.min="30";startRow.style.display="none";document.getElementById("startDate").value="";}
     }
-
     function renderHolidays(){
-      const ul=document.getElementById("holidaysList"); ul.innerHTML="";
+      const ul=document.getElementById("holidaysList");ul.innerHTML="";
       window.customHolidays.forEach(item=>{
-        const li=document.createElement("li");
-        li.textContent=item.date+" – "+item.type;
-        const btn=document.createElement("button");
-        btn.className="btn btn-sm btn-outline-danger ms-2"; btn.textContent="Usuń";
-        btn.onclick=()=>{ window.customHolidays = window.customHolidays.filter(x=>x!==item); renderHolidays(); };
-        li.appendChild(btn); ul.appendChild(li);
+        const li=document.createElement("li");li.textContent=item.date+" – "+item.type;
+        const btn=document.createElement("button");btn.className="btn btn-sm btn-outline-danger ms-2";btn.textContent="Usuń";
+        btn.onclick=()=>{window.customHolidays=window.customHolidays.filter(x=>x!==item);renderHolidays();};
+        li.appendChild(btn);ul.appendChild(li);
       });
     }
-
     function updateRanges(){
       const m=parseInt(document.getElementById("month").value||"0",10);
       const y=parseInt(document.getElementById("year").value||"0",10);
       const holidayPicker=document.getElementById("holidayPicker");
       const startInput=document.getElementById("startDate");
-      if(!m||!y){
-        holidayPicker?.removeAttribute("min"); holidayPicker?.removeAttribute("max");
-        startInput?.removeAttribute("min"); startInput?.removeAttribute("max");
-        return;
-      }
-      const daysInMonth=new Date(y,m,0).getDate();
-      const mm=String(m).padStart(2,'0');
-      const minD=`${y}-${mm}-01`, maxD=`${y}-${mm}-${String(daysInMonth).padStart(2,'0')}`;
-      if(holidayPicker){ holidayPicker.min=minD; holidayPicker.max=maxD; if(holidayPicker.value && (holidayPicker.value<minD || holidayPicker.value>maxD)) holidayPicker.value=""; }
-      if(startInput){ startInput.min=minD; startInput.max=maxD; if(startInput.value && (startInput.value<minD || startInput.value>maxD)) startInput.value=""; }
+      if(!m||!y){holidayPicker?.removeAttribute("min");holidayPicker?.removeAttribute("max");startInput?.removeAttribute("min");startInput?.removeAttribute("max");return;}
+      const days=new Date(y,m,0).getDate(),mm=String(m).padStart(2,'0');
+      const minD=`${y}-${mm}-01`,maxD=`${y}-${mm}-${String(days).padStart(2,'0')}`;
+      if(holidayPicker){holidayPicker.min=minD;holidayPicker.max=maxD;if(holidayPicker.value&&(holidayPicker.value<minD||holidayPicker.value>maxD))holidayPicker.value="";}
+      if(startInput){startInput.min=minD;startInput.max=maxD;if(startInput.value&&(startInput.value<minD||startInput.value>maxD))startInput.value="";}
     }
 
     async function generateTable(){
@@ -362,89 +304,67 @@
       const startDateVal=document.getElementById("startDate").value;
       const addRandom=document.getElementById("randomHolidays").checked;
 
-      if(!fullName || !monthVal || !yearVal){ alert("Uzupełnij wymagane pola."); return; }
-      if(contractType==="zlecenie" && isPartial && !startDateVal){ alert("Wybierz datę startu."); return; }
+      if(!fullName||!monthVal||!yearVal){alert("Uzupełnij wymagane pola.");return;}
+      if(contractType==="zlecenie"&&isPartial&&!startDateVal){alert("Wybierz datę startu.");return;}
 
-      const holidaysSet = getPolishPublicHolidays(yearVal);
+      const holidaysSet=getPolishPublicHolidays(yearVal);
       const daysInMonth=new Date(yearVal,monthVal,0).getDate();
 
       let dayData=[];
-      for(let d=1; d<=daysInMonth; d++){
+      for(let d=1;d<=daysInMonth;d++){
         const dateObj=new Date(yearVal,monthVal-1,d);
-        const dd=String(d).padStart(2,'0'), mm=String(monthVal).padStart(2,'0'), iso=`${yearVal}-${mm}-${dd}`;
+        const dd=String(d).padStart(2,'0'),mm=String(monthVal).padStart(2,'0'),iso=`${yearVal}-${mm}-${dd}`;
         const weekend=isWeekend(dateObj);
-        const isPublicHoliday = holidaysSet.has(iso);
-        const custom = window.customHolidays.find(x=>x.date===iso);
-
-        // „Urlop”: tylko państwowe święta pokazują „Święto”. Reszta „-”.
-        const holType = isPublicHoliday ? "Święto" : (custom ? "-" : "");
-
-        const isWork = (!weekend && !isPublicHoliday && !custom);
-        dayData.push({ day:d, date:dateObj, isWorkingDay:isWork, holidayType:holType, hours:0, start:"-", end:"-" });
+        const isPublic=holidaysSet.has(iso);
+        const custom=window.customHolidays.find(x=>x.date===iso);
+        const holType=isPublic?"Święto":(custom?"-":"");
+        const isWork=(!weekend&&!isPublic&&!custom);
+        dayData.push({day:d,date:dateObj,isWorkingDay:isWork,holidayType:holType,hours:0,start:"-",end:"-"});
       }
 
-      // Niepełny miesiąc – wyłącz wcześniejsze dni robocze
-      if(contractType==="zlecenie" && isPartial && startDateVal){
+      if(contractType==="zlecenie"&&isPartial&&startDateVal){
         const startObj=new Date(startDateVal+"T00:00:00");
-        dayData.forEach(dd=>{
-          if(dd.date<startObj && dd.isWorkingDay){ dd.isWorkingDay=false; dd.holidayType="-"; }
-        });
+        dayData.forEach(dd=>{if(dd.date<startObj&&dd.isWorkingDay){dd.isWorkingDay=false;dd.holidayType="-";}});
       }
+      if(contractType==="zlecenie"&&addRandom&&!isPartial){applyRandomTimeOff(dayData);}
 
-      // Losowe wolne tylko dla zlecenia i niepełny=false
-      if(contractType==="zlecenie" && addRandom && !isPartial){
-        applyRandomTimeOff(dayData);
-      }
-
-      let workingDays = dayData.filter(x=>x.isWorkingDay);
-      let totalHours = 0;
-
+      let workingDays=dayData.filter(x=>x.isWorkingDay);
       if(contractType==="praca"){
-        workingDays.forEach(d=>{ d.hours=8; d.start="8:00"; d.end="16:00"; });
-        totalHours = workingDays.length*8;
-
-      } else if(contractType==="praca3/4"){
-        workingDays.forEach(d=>{ d.hours=6; d.start="8:00"; d.end="14:00"; });
-        totalHours = workingDays.length*6;
-
-      } else {
-        totalHours = parseInt(document.getElementById("hours").value||"0",10);
-        if(isNaN(totalHours) || totalHours<0){ alert("Podaj nieujemną liczbę godzin."); return; }
-        if(!isPartial && totalHours<30){ alert("Minimalnie 30 h w trybie pełnym."); return; }
+        workingDays.forEach(d=>{d.hours=8;d.start="8:00";d.end="16:00";});
+      }else if(contractType==="praca3/4"){
+        workingDays.forEach(d=>{d.hours=6;d.start="8:00";d.end="14:00";});
+      }else{
+        let total=parseInt(document.getElementById("hours").value||"0",10);
+        if(isNaN(total)||total<0){alert("Podaj nieujemną liczbę godzin.");return;}
+        if(!isPartial&&total<30){alert("Minimalnie 30 h w trybie pełnym.");return;}
 
         if(isPartial){
-          if(workingDays.length===0){ alert("Brak dni roboczych od daty startu."); return; }
-          const W=workingDays.length;
-          const minRequired=Math.max(1, W-2);
-          if(totalHours<minRequired){ alert(`Za mało godzin. Minimum ${minRequired} h.`); return; }
-          const fillCount=Math.min(W,totalHours);
+          if(workingDays.length===0){alert("Brak dni roboczych od daty startu.");return;}
+          const W=workingDays.length,minReq=Math.max(1,W-2);
+          if(total<minReq){alert(`Za mało godzin. Minimum ${minReq} h.`);return;}
+          const fillCount=Math.min(W,total);
           if(fillCount<W){
             const toSkip=W-fillCount;
-            for(let s=W-toSkip; s<W; s++){ workingDays[s].isWorkingDay=false; }
+            for(let s=W-toSkip;s<W;s++){workingDays[s].isWorkingDay=false;}
             workingDays=workingDays.slice(0,fillCount);
           }
-          const arr=distributeHours(totalHours, workingDays.length, MIN_ZL_PART, MAX_ZL_PART); if(!arr) return;
-          assignTimes(workingDays, arr);
-
-        } else {
-          const WDIdx = dayData.map((d,i)=> d.isWorkingDay ? i : -1).filter(i=> i>=0);
-          const k = chooseWorkDays(totalHours, WDIdx.length, MIN_ZL_FULL, MAX_ZL_FULL);
-          if(k===null){ alert(`Za dużo godzin (${totalHours}) na dostępne dni (${WDIdx.length}).`); return; }
-
-          const picksRel = selectEvenIndices(WDIdx.length, k);
-          const picksAbs = new Set(picksRel.map(i=> WDIdx[i]));
-          for(const i of WDIdx){ if(!picksAbs.has(i)){ dayData[i].isWorkingDay=false; dayData[i].holidayType="-"; } }
-          workingDays = dayData.filter(x=>x.isWorkingDay);
-
-          const arr=distributeHours(totalHours, workingDays.length, MIN_ZL_FULL, MAX_ZL_FULL); if(!arr) return;
-          assignTimes(workingDays, arr);
+          const arr=distributeHours(total,workingDays.length,MIN_ZL_PART,MAX_ZL_PART);if(!arr)return;
+          assignTimes(workingDays,arr);
+        }else{
+          const idx=dayData.map((d,i)=>d.isWorkingDay?i:-1).filter(i=>i>=0);
+          const k=chooseWorkDays(total,idx.length,MIN_ZL_FULL,MAX_ZL_FULL);
+          if(k===null){alert(`Za dużo godzin (${total}) na dostępne dni (${idx.length}).`);return;}
+          const picksRel=selectEvenIndices(idx.length,k);
+          const picksAbs=new Set(picksRel.map(i=>idx[i]));
+          for(const i of idx){if(!picksAbs.has(i)){dayData[i].isWorkingDay=false;dayData[i].holidayType="-";}}
+          workingDays=dayData.filter(x=>x.isWorkingDay);
+          const arr=distributeHours(total,workingDays.length,MIN_ZL_FULL,MAX_ZL_FULL);if(!arr)return;
+          assignTimes(workingDays,arr);
         }
       }
 
-      // Widok
-      const monthName = monthNames[monthVal-1];
-      const lastName = fullName.split(/\s+/).slice(1).join(" ");
-      const rows = dayData.map(inf=>{
+      const monthName=monthNames[monthVal-1];
+      const rows=dayData.map(inf=>{
         const dd=String(inf.day).padStart(2,'0');
         const mm=String(monthVal).padStart(2,'0');
         const yyyy=yearVal;
@@ -453,72 +373,64 @@
           return `<tr>
             <td>${inf.day}</td><td>${dd}.${mm}.${yyyy} (${wkd})</td>
             <td>${inf.start}</td><td>${inf.end}</td><td>${inf.hours}</td>
-            <td>${lastName}</td><td></td><td>-</td>
+            <td>-</td>
           </tr>`;
-        } else {
-          const shown = (inf.holidayType==="Święto") ? "Święto" : "-";
+        }else{
+          const shown=(inf.holidayType==="Święto")?"Święto":"-";
           return `<tr class="holiday">
             <td>${inf.day}</td><td>${dd}.${mm}.${yyyy} (${wkd})</td>
             <td>-</td><td>-</td><td>0</td>
-            <td>${lastName}</td><td></td><td>${shown}</td>
+            <td>${shown}</td>
           </tr>`;
         }
       });
 
-      const sumOfHours = dayData.filter(d=>d.isWorkingDay).reduce((a,b)=>a+b.hours,0);
-      rows.push(`<tr class="fw-bold"><td colspan="4">Suma godzin:</td><td>${sumOfHours}</td><td colspan="3"></td></tr>`);
+      const sum=dayData.filter(d=>d.isWorkingDay).reduce((a,b)=>a+b.hours,0);
+      rows.push(`<tr class="fw-bold"><td colspan="4">Suma godzin:</td><td>${sum}</td><td></td></tr>`);
 
-      const contractLabel = (contractType==="praca")
-        ? "Umowa o pracę (8:00–16:00)"
-        : (contractType==="praca3/4" ? "Umowa o pracę (3/4 etatu, 8:00–14:00)" : "Umowa zlecenie");
+      const contractLabel=(contractType==="praca")?"Umowa o pracę (8:00–16:00)":
+                           (contractType==="praca3/4"?"Umowa o pracę (3/4 etatu, 8:00–14:00)":"Umowa zlecenie");
 
-      const html = `
+      const html=`
         <div class="card">
-          <div class="card-header"><strong>Wynik</strong></div>
           <div class="card-body">
             <h5 class="mb-1">${monthName} ${yearVal}</h5>
             <div class="mb-2">${fullName}</div>
-            <div class="mb-3"><span class="badge bg-primary-subtle text-primary-emphasis">${contractLabel}${(contractType==="zlecenie" && document.getElementById("partialMonth").checked) ? " – Niepełny miesiąc" : ""}</span></div>
+            <div class="mb-3"><span class="badge bg-primary-subtle text-primary-emphasis">${contractLabel}${(contractType==="zlecenie"&&document.getElementById("partialMonth").checked)?" – Niepełny miesiąc":""}</span></div>
             <table class="final-table">
               <thead>
                 <tr>
-                  <th>Dzień</th><th>Data</th><th>Godz. rozpoczęcia</th><th>Godz. zakończenia</th>
-                  <th>Suma godzin</th><th>Podpis zleceniobiorcy</th><th>Podpis zleceniodawcy</th><th>Urlop</th>
+                  <th>Dzień</th><th>Data</th><th>Godz. rozpoczęcia</th><th>Godz. zakończenia</th><th>Suma godzin</th><th>Urlop</th>
                 </tr>
               </thead>
               <tbody>${rows.join("")}</tbody>
             </table>
           </div>
         </div>`;
-      document.getElementById("output").innerHTML = html;
-      document.getElementById("generatePDF").disabled = false;
+      document.getElementById("output").innerHTML=html;
+      document.getElementById("generatePDF").disabled=false;
       document.getElementById("generatorForm").classList.remove("was-validated");
     }
 
     async function downloadPDF(){
       try{
-        const jsPDF = window.jspdf.jsPDF;
-        const pdf = new jsPDF("portrait","pt","a4");
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const outputEl = document.getElementById("output");
-        if(!outputEl){ alert("Najpierw wygeneruj tabelę."); return; }
-
-        // Skala 1.2 daje wyraźniejszy wydruk
-        const canvas = await html2canvas(outputEl,{ scale:1.2, useCORS:true, allowTaint:false, backgroundColor:"#ffffff" });
-        const img = canvas.toDataURL("image/png");
-        // Prosty fit do strony
-        const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
-        const imgW = canvas.width * ratio;
-        const imgH = canvas.height * ratio;
-        pdf.addImage(img, "PNG", (pageWidth-imgW)/2, 20, imgW, imgH);
+        const jsPDF=window.jspdf.jsPDF;
+        const pdf=new jsPDF("portrait","pt","a4");
+        const pageWidth=pdf.internal.pageSize.getWidth();
+        const pageHeight=pdf.internal.pageSize.getHeight();
+        const outputEl=document.getElementById("output");
+        if(!outputEl){alert("Najpierw wygeneruj tabelę.");return;}
+        const canvas=await html2canvas(outputEl,{scale:1.2,useCORS:true,allowTaint:false,backgroundColor:"#ffffff"});
+        const img=canvas.toDataURL("image/png");
+        const ratio=Math.min(pageWidth/canvas.width,pageHeight/canvas.height);
+        const imgW=canvas.width*ratio,imgH=canvas.height*ratio;
+        pdf.addImage(img,"PNG",(pageWidth-imgW)/2,20,imgW,imgH);
         pdf.save("Tabela_Godzinowa.pdf");
       }catch(err){
-        console.error("Błąd PDF:", err);
+        console.error("Błąd PDF:",err);
         alert("Nie udało się wygenerować PDF.");
       }
     }
-
   })();
   </script>
 </body>
