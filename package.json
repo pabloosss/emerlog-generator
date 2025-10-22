@@ -2,9 +2,11 @@
   "name": "emerlog-generator",
   "version": "1.0.0",
   "private": true,
-  "scripts": { "start": "node server.js" },
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "@getbrevo/brevo": "^1.0.0",
+    "@getbrevo/brevo": "^3.0.0",
     "express": "^4.19.2"
   }
 }
