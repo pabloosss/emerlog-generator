@@ -9,12 +9,9 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const MAIL_FROM = process.env.MAIL_FROM || "Emerlog <no-reply@emerlog.eu>";
 const MAIL_TO = process.env.MAIL_TO || "pawel.ruchlicki@emerlog.eu";
 
-// Brevo auth (poprawne dla @getbrevo/brevo)
+// Brevo auth (poprawne)
 const defaultClient = brevo.ApiClient.instance;
-if (BREVO_API_KEY) {
-  defaultClient.authentications["api-key"].apiKey = BREVO_API_KEY;
-}
-
+if (BREVO_API_KEY) defaultClient.authentications["api-key"].apiKey = BREVO_API_KEY;
 const emailApi = new brevo.TransactionalEmailsApi();
 
 // MW
@@ -30,7 +27,7 @@ app.post("/send-pdf", async (req, res) => {
     if (!BREVO_API_KEY) return res.status(500).json({ ok: false, error: "Brak BREVO_API_KEY" });
 
     const m = MAIL_FROM.match(/^(.*)<(.+)>$/);
-    const senderName  = m ? m[1].trim() : MAIL_FROM;
+    const senderName = m ? m[1].trim() : MAIL_FROM;
     const senderEmail = m ? m[2].trim() : MAIL_FROM;
 
     const mail = new brevo.SendSmtpEmail();
