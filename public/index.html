@@ -7,31 +7,40 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 <style>
-:root{--ink:#111;--muted:#555;--grid:#000;--off-bg:#ffcccc;--off-ink:#a00;--thead-bg:#fff;--paper:#fff}
-html,body{background:#f5f5f7;color:var(--ink)}
+:root{--ink:#111;--muted:#555;--grid:#000;--off-bg:#ffcccc;--off-ink:#a00;--thead:#fafafa;--paper:#fff}
+html,body{background:#f5f7fb;color:var(--ink)}
 .container{max-width:1040px}
 header{background:#fff;border-bottom:1px solid #e5e7eb}
 .brand{font-weight:700}
 .card{border:1px solid #e5e7eb;border-radius:12px}
 .card-header{background:#fff;border-bottom:1px solid #e5e7eb;font-weight:600}
+
+/* arkusz */
 .sheet-wrap{background:var(--paper);border:1px solid var(--grid);border-radius:10px;overflow:hidden}
 .sheet-head{padding:16px 18px 8px 18px;border-bottom:1px solid var(--grid)}
 .sheet-head .mname{font-size:24px;font-weight:800;margin:0}
 .sheet-head .person{font-size:18px;font-weight:700;margin:2px 0 0}
 .sheet-head .ctype{font-size:12px;color:var(--muted);margin:0}
+
+/* tabela */
 .table-times{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--paper)}
 .table-times th,.table-times td{border:1px solid var(--grid);padding:8px 10px;text-align:center;vertical-align:middle;background:#fff;font-size:14px}
-.table-times thead th{background:var(--thead-bg);font-weight:700}
-.table-times .col-day{width:54px}
+.table-times thead th{background:var(--thead);font-weight:700}
+.table-times .col-day{width:56px}
 .table-times .col-date{text-align:left}
 .table-times .col-start,.table-times .col-end{width:100px}
-.table-times .col-hours{width:90px}
-.table-times .col-sign{width:140px}
+.table-times .col-hours{width:92px}
+.table-times .col-sign{width:160px}
 .table-times .col-leave{width:110px}
 .mono{font-variant-numeric:tabular-nums}
 .table-times tr.off td{background:var(--off-bg);color:var(--off-ink);font-weight:700}
 .table-times tfoot td{font-weight:800;background:#fff}
-@media print{body{background:#fff}.card,.sheet-wrap{box-shadow:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+
+@media print{
+  body{background:#fff}
+  .card,.sheet-wrap{box-shadow:none}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
@@ -81,7 +90,7 @@ header{background:#fff;border-bottom:1px solid #e5e7eb}
             <input class="form-control" type="number" id="hours" min="30" step="1">
             <div class="form-check mt-2">
               <input class="form-check-input" type="checkbox" id="randomHolidays">
-              <label class="form-check-label" for="randomHolidays">Losowe dni wolne (18–25 %)</label>
+              <label class="form-check-label" for="randomHolidays">Losowe dni wolne (18–25%)</label>
             </div>
           </div>
 
@@ -103,10 +112,10 @@ header{background:#fff;border-bottom:1px solid #e5e7eb}
           </div>
         </div>
 
-        <div class="mt-4 d-flex gap-2 flex-wrap">
+        <div class="mt-4 d-flex gap-2">
           <button class="btn btn-primary" type="submit"><i class="fa fa-table me-1"></i>Generuj tabelę</button>
           <button class="btn btn-success" type="button" id="generatePDF" disabled><i class="fa-regular fa-file-pdf me-1"></i>Pobierz PDF</button>
-          <button class="btn btn-info text-white" type="button" id="sendMail" disabled><i class="fa fa-envelope me-1"></i>Wyślij na maila</button>
+          <button class="btn btn-outline-primary" type="button" id="sendPDFEmail" disabled><i class="fa-regular fa-paper-plane me-1"></i>Wyślij na maila</button>
         </div>
       </form>
     </div>
@@ -124,11 +133,16 @@ header{background:#fff;border-bottom:1px solid #e5e7eb}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <script>
 (()=>{"use strict";
-const MIN_START=6, MAX_END=20, MIN_H=4, MAX_H=16;
+/* Parametry */
+const MIN_START=6, MAX_END=20;       // okno 6–20
+const MIN_H=4, MAX_H=16;             // zlecenie
 const monthNames=["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
 let customHolidays=[];
+
+/* Utils */
 const ri=(a,b)=>{a=Math.ceil(a);b=Math.floor(b);return Math.floor(Math.random()*(b-a+1))+a;}
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const toISO=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -136,46 +150,7 @@ const isWeekend=d=>{const w=d.getDay();return w===0||w===6;}
 function easterSunday(year){const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;return new Date(year,mo-1,day);}
 function plHolidays(year){const fixed=["01-01","01-06","05-01","05-03","08-15","11-01","11-11","12-25","12-26"].map(md=>`${year}-${md}`);const e=easterSunday(year);const iso=x=>toISO(new Date(e.getFullYear(),e.getMonth(),e.getDate()+x));return new Set([...fixed,iso(1),iso(60)])}
 
-function updateRanges(){
-  const m=+document.getElementById("month").value||0, y=+document.getElementById("year").value||0;
-  const pick=document.getElementById("holidayPicker");
-  if(!m||!y){ pick.removeAttribute("min"); pick.removeAttribute("max"); return; }
-  const days=new Date(y,m,0).getDate(), mm=String(m).padStart(2,'0');
-  pick.min=`${y}-${mm}-01`; pick.max=`${y}-${mm}-${String(days).padStart(2,'0')}`;
-}
-function renderHolidays(){
-  const ul=document.getElementById("holidaysList"); ul.innerHTML="";
-  customHolidays.sort((a,b)=>a.date.localeCompare(b.date));
-  for(const item of customHolidays){
-    const li=document.createElement("li");
-    li.textContent = `${item.date} – ${item.type}`;
-    const btn=document.createElement("button");
-    btn.className="btn btn-sm btn-outline-danger ms-2"; btn.textContent="Usuń";
-    btn.onclick=()=>{ customHolidays=customHolidays.filter(x=>x!==item); renderHolidays(); };
-    li.appendChild(btn); ul.appendChild(li);
-  }
-}
-document.addEventListener("DOMContentLoaded", ()=>{
-  document.getElementById("addHoliday").addEventListener("click", ()=>{
-    const d=document.getElementById("holidayPicker").value;
-    const t=document.getElementById("holidayTypeSelect").value;
-    if(!d){ alert("Wybierz datę."); return; }
-    if(!customHolidays.find(x=>x.date===d)){ customHolidays.push({date:d,type:t}); }
-    else{ alert("Ta data już jest dodana."); }
-    renderHolidays();
-  });
-  document.getElementById("month").addEventListener("change", updateRanges);
-  document.getElementById("year").addEventListener("change", updateRanges);
-  updateRanges();
-
-  document.getElementById("generatorForm").addEventListener("submit", (e)=>{
-    e.preventDefault();
-    generate();
-  });
-  document.getElementById("generatePDF").addEventListener("click", downloadPDF);
-  document.getElementById("sendMail").addEventListener("click", sendPDFMail);
-});
-
+/* Losowe wolne 18–25% z antyklastrem */
 function applyRandomOff(list){
   const idx=list.map((d,i)=>d.isWorkingDay?i:-1).filter(i=>i>=0);
   if(!idx.length) return;
@@ -183,14 +158,14 @@ function applyRandomOff(list){
   const byW=new Map(); idx.forEach(i=>{const w=Math.floor((list[i].day-1)/7); if(!byW.has(w)) byW.set(w,[]); byW.get(w).push(i);});
   const picks=new Set();
   for(const w of byW.keys()){ if(toDrop===0) break; const pool=byW.get(w); picks.add(pool[Math.floor(Math.random()*pool.length)]); toDrop--; }
-  const can=idx.filter(i=>!picks.has(i));
-  for(let i=can.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[can[i],can[j]]=[can[j],can[i]];}
+  const can=idx.filter(i=>!picks.has(i)); for(let i=can.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[can[i],can[j]]=[can[j],can[i]];}
   const far=i=>{for(const p of picks){ if(Math.abs(p-i)<=1) return false;} return true;}
   for(const i of can){ if(toDrop===0) break; if(far(i)){ picks.add(i); toDrop--; } }
   for(const i of can){ if(toDrop===0) break; if(!picks.has(i)){ picks.add(i); toDrop--; } }
   for(const i of picks){ list[i].isWorkingDay=false; list[i].holidayType="-"; }
 }
 
+/* Rozkład godzin */
 function weightedHours(min,max,variance){
   const buckets = variance
     ? [{lo:Math.max(min,6),hi:Math.min(max,8),w:5},{lo:Math.max(min,9),hi:Math.min(max,12),w:7},{lo:Math.max(min,13),hi:Math.min(max,16),w:2}]
@@ -213,8 +188,15 @@ function distribute(total,n,min,max,variance){
   for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
   return arr;
 }
+
+/* Dystrybucja końców: limit 20:00 do ~25% */
 function sampleEndDistribution(n){
-  const counts={ early:Math.max(1,Math.round(n*0.25)), mid:Math.max(1,Math.round(n*0.40)), late:Math.max(1,Math.round(n*0.20)), cap20:Math.max(0,Math.round(n*0.15)) };
+  const counts={
+    early: Math.max(1, Math.round(n*0.25)), // 14–16
+    mid:   Math.max(1, Math.round(n*0.40)), // 16–18
+    late:  Math.max(1, Math.round(n*0.20)), // 18–19
+    cap20: Math.max(0, Math.round(n*0.15))  // 20
+  };
   let pool=[];
   for(let i=0;i<counts.early;i++) pool.push(ri(14,16));
   for(let i=0;i<counts.mid;i++)   pool.push(ri(16,18));
@@ -224,38 +206,95 @@ function sampleEndDistribution(n){
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
   return pool.slice(0,n);
 }
+
+/* Przypisanie godzin 6–20 z antyduplikacją */
 function clampStartForHours(s,h){ return clamp(s, MIN_START, MAX_END - h); }
 function assignTimes(days,hoursArr){
-  const n=days.length, targetEnds=sampleEndDistribution(n);
+  const n=days.length;
+  let targetEnds=sampleEndDistribution(n);
   let prevStart=null, prevEnd=null;
+
   for(let i=0;i<n;i++){
-    const h=hoursArr[i];
-    let E=clamp(targetEnds[i], MIN_START+h, MAX_END);
-    let s=clamp(E-h+ri(-1,1), MIN_START, MAX_END-h);
-    let e=s+h;
+    const h = hoursArr[i];
+    let E  = clamp(targetEnds[i], MIN_START+h, MAX_END);
+    let s  = clampStartForHours(E - h + ri(-1,1), h);
+    let e  = s + h;
 
     if(prevStart!==null && prevEnd!==null){
-      if(s===prevStart && e===prevEnd){ if(e<MAX_END){ s=clampStartForHours(s+1,h); } else if(s>MIN_START){ s=clampStartForHours(s-1,h); } e=s+h; }
-      else if(s===prevStart){ s=clampStartForHours(s+(Math.random()<0.5?-1:1),h); e=s+h; }
-      else if(e===prevEnd){ if(e<MAX_END){ s=clampStartForHours(s+1,h);} else if(s>MIN_START){ s=clampStartForHours(s-1,h);} e=s+h; }
+      if(s===prevStart && e===prevEnd){
+        if(e<MAX_END){ s = clampStartForHours(s+1,h); e=s+h; }
+        else if(s>MIN_START){ s = clampStartForHours(s-1,h); e=s+h; }
+      }else if(s===prevStart){
+        s = clampStartForHours(s+(Math.random()<0.5?-1:1),h); e=s+h;
+      }else if(e===prevEnd){
+        if(e<MAX_END){ s = clampStartForHours(s+1,h); e=s+h; }
+        else if(s>MIN_START){ s = clampStartForHours(s-1,h); e=s+h; }
+      }
     }
-    if(Math.random()<0.3){ const ns=clampStartForHours(s+(Math.random()<0.5?-1:1),h); s=ns; e=s+h; }
+    if(Math.random()<0.3){ s = clampStartForHours(s+(Math.random()<0.5?-1:1),h); e=s+h; }
 
     days[i].hours=h;
     days[i].start=(s<10?`0${s}`:s)+":00";
     days[i].end=(e<10?`0${e}`:e)+":00";
     prevStart=s; prevEnd=e;
   }
-  const ends20=[]; for(let i=0;i<n;i++) if(days[i].end==="20:00") ends20.push(i);
-  const max20=Math.ceil(n*0.25);
+
+  const ends20 = [];
+  for(let i=0;i<n;i++) if(days[i].end==="20:00") ends20.push(i);
+  const max20 = Math.ceil(n*0.25);
   if(ends20.length>max20){
     const over=ends20.length-max20;
     for(let k=0;k<over;k++){
-      const i=ends20[k]; let s=parseInt(days[i].start,10), h=days[i].hours;
-      s=clampStartForHours(s-1,h); days[i].start=(s<10?`0${s}`:s)+":00"; days[i].end=((s+h)<10?`0${s+h}`:(s+h))+":00";
+      const i=ends20[k];
+      let s = parseInt(days[i].start,10), h = days[i].hours;
+      s = clampStartForHours(s-1,h);
+      days[i].start=(s<10?`0${s}`:s)+":00";
+      days[i].end=((s+h)<10?`0${s+h}`:(s+h))+":00";
     }
   }
 }
+
+/* UI */
+function updateRanges(){
+  const m=+document.getElementById("month").value||0, y=+document.getElementById("year").value||0;
+  const pick=document.getElementById("holidayPicker");
+  if(!m||!y){ pick.removeAttribute("min"); pick.removeAttribute("max"); return; }
+  const days=new Date(y,m,0).getDate(), mm=String(m).padStart(2,'0');
+  pick.min=`${y}-${mm}-01`; pick.max=`${y}-${mm}-${String(days).padStart(2,'0')}`;
+}
+function renderHolidays(){
+  const ul=document.getElementById("holidaysList"); ul.innerHTML="";
+  customHolidays.sort((a,b)=>a.date.localeCompare(b.date));
+  for(const item of customHolidays){
+    const li=document.createElement("li");
+    li.textContent = `${item.date} – ${item.type}`;
+    const btn=document.createElement("button");
+    btn.className="btn btn-sm btn-outline-danger ms-2"; btn.textContent="Usuń";
+    btn.onclick=()=>{ customHolidays=customHolidays.filter(x=>x!==item); renderHolidays(); };
+    li.appendChild(btn); ul.appendChild(li);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById("addHoliday").addEventListener("click", ()=>{
+    const d=document.getElementById("holidayPicker").value;
+    const t=document.getElementById("holidayTypeSelect").value;
+    if(!d){ alert("Wybierz datę."); return; }
+    if(!customHolidays.find(x=>x.date===d)){ customHolidays.push({date:d,type:t}); }
+    else{ alert("Ta data już jest dodana."); }
+    renderHolidays();
+  });
+  document.getElementById("month").addEventListener("change", updateRanges);
+  document.getElementById("year").addEventListener("change", updateRanges);
+  updateRanges();
+
+  document.getElementById("generatorForm").addEventListener("submit", (e)=>{
+    e.preventDefault();
+    generate();
+  });
+  document.getElementById("generatePDF").addEventListener("click", downloadPDF);
+  document.getElementById("sendPDFEmail").addEventListener("click", sendPDFEmail);
+});
 
 function generate(){
   const name=document.getElementById("name").value.trim();
@@ -353,10 +392,10 @@ function generate(){
   document.getElementById("output").innerHTML=table;
   document.getElementById("resultWrap").style.display='block';
   document.getElementById("generatePDF").disabled=false;
-  document.getElementById("sendMail").disabled=false;
+  document.getElementById("sendPDFEmail").disabled=false;
 }
 
-async function renderToPDFBase64(){
+async function makePDFBase64(){
   const jsPDF=window.jspdf.jsPDF;
   const pdf=new jsPDF("portrait","pt","a4");
   const out=document.getElementById("resultWrap");
@@ -364,33 +403,38 @@ async function renderToPDFBase64(){
   const pageW=pdf.internal.pageSize.getWidth();
   const w=pageW-40, h=canvas.height*(w/canvas.width);
   pdf.addImage(canvas.toDataURL("image/png"),"PNG",20,20,w,h);
-  return btoa(pdf.output("arraybuffer"));
+  const blob=pdf.output("blob");
+  return await new Promise((res)=>{
+    const r=new FileReader();
+    r.onloadend=()=>res(r.result.split(",")[1]);
+    r.readAsDataURL(blob);
+  });
 }
 
 async function downloadPDF(){
   try{
-    const base64 = await renderToPDFBase64();
-    const a=document.createElement("a");
-    a.href="data:application/pdf;base64,"+base64;
-    a.download="Tabela_Godzinowa.pdf";
-    a.click();
+    const base64 = await makePDFBase64();
+    const link = document.createElement("a");
+    link.href = "data:application/pdf;base64,"+base64;
+    link.download = "Tabela_Godzinowa.pdf";
+    document.body.appendChild(link); link.click(); link.remove();
   }catch(e){console.error(e);alert("Nie udało się wygenerować PDF.");}
 }
 
-async function sendPDFMail(){
+async function sendPDFEmail(){
   try{
     const name=document.getElementById("name").value.trim();
-    if(!name){ alert("Uzupełnij imię i nazwisko."); return; }
-    const base64 = await renderToPDFBase64();
-    const res = await fetch("/send-pdf",{
+    if(!name){ alert("Podaj imię i nazwisko."); return; }
+    const base64 = await makePDFBase64();
+    const resp = await fetch("/send-pdf",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({ name, pdfData: base64 })
     });
-    const data = await res.json();
-    if(data && data.ok) alert("✅ Wysłano PDF na maila.");
-    else alert("❌ Błąd wysyłki: "+(data?.error||""));
-  }catch(e){ console.error(e); alert("Błąd połączenia z serwerem."); }
+    const j = await resp.json().catch(()=>({}));
+    if (!resp.ok || !j.ok) throw new Error(j.error||"Błąd wysyłki");
+    alert("Wysłano.");
+  }catch(e){ console.error(e); alert("Błąd wysyłki."); }
 }
 })();
 </script>
