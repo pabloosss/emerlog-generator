@@ -1,8 +1,5 @@
 const express = require("express");
 const path = require("path");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-
 // Brevo (Sendinblue)
 const brevo = require("@getbrevo/brevo");
 
@@ -19,13 +16,12 @@ const apiInstance = new brevo.TransactionalEmailsApi();
 apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, BREVO_API_KEY);
 
 // MW
-app.use(cors());
-app.use(bodyParser.json({ limit: "100mb" }));
+app.use(express.json({ limit: "100mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/test", (_req, res) => res.json({ ok: true }));
 
-// wysyłka PDF (base64)
+// wysyłka PDF (base64 bez prefixu)
 app.post("/send-pdf", async (req, res) => {
   try {
     const { name, pdfData } = req.body;
@@ -33,19 +29,17 @@ app.post("/send-pdf", async (req, res) => {
     if (!BREVO_API_KEY)  return res.status(500).json({ ok: false, error: "Brak BREVO_API_KEY" });
 
     const mail = new brevo.SendSmtpEmail();
-    mail.sender = { name: MAIL_FROM.split("<")[0].trim(), email: (MAIL_FROM.match(/<(.+)>/)||[])[1] || MAIL_FROM };
+    const m = MAIL_FROM.match(/^(.*)<(.+)>$/);
+    const senderName  = m ? m[1].trim() : MAIL_FROM;
+    const senderEmail = m ? m[2].trim() : MAIL_FROM;
+
+    mail.sender = { name: senderName, email: senderEmail };
     mail.to = [{ email: MAIL_TO }];
     mail.subject = `Rozliczenie godzin – ${name}`;
     mail.htmlContent = `<p>W załączniku rozliczenie godzin.</p><p>Pracownik: <b>${name}</b></p>`;
-    mail.attachment = [
-      {
-        name: "Tabela_Godzinowa.pdf",
-        content: pdfData,            // base64 bez prefixu
-      },
-    ];
+    mail.attachment = [{ name: "Tabela_Godzinowa.pdf", content: pdfData }];
 
     await apiInstance.sendTransacEmail(mail);
-    console.log("📤 Brevo: wysłano do", MAIL_TO);
     return res.json({ ok: true });
   } catch (e) {
     console.error("❌ Brevo error:", e?.response?.text || e.message);
