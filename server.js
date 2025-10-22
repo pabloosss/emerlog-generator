@@ -1,19 +1,21 @@
 const express = require("express");
 const path = require("path");
-// Brevo (Sendinblue)
 const brevo = require("@getbrevo/brevo");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ENV
-const BREVO_API_KEY = process.env.BREVO_API_KEY; // xkeysib-...
+const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const MAIL_FROM = process.env.MAIL_FROM || "Emerlog <no-reply@emerlog.eu>";
 const MAIL_TO = process.env.MAIL_TO || "pawel.ruchlicki@emerlog.eu";
 
-// Brevo client
-const apiInstance = new brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, BREVO_API_KEY);
+// Brevo auth (poprawne dla @getbrevo/brevo)
+const defaultClient = brevo.ApiClient.instance;
+if (BREVO_API_KEY) {
+  defaultClient.authentications["api-key"].apiKey = BREVO_API_KEY;
+}
+
+const emailApi = new brevo.TransactionalEmailsApi();
 
 // MW
 app.use(express.json({ limit: "100mb" }));
@@ -21,29 +23,28 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/test", (_req, res) => res.json({ ok: true }));
 
-// wysyłka PDF (base64 bez prefixu)
 app.post("/send-pdf", async (req, res) => {
   try {
     const { name, pdfData } = req.body;
     if (!name || !pdfData) return res.status(400).json({ ok: false, error: "Brak danych" });
-    if (!BREVO_API_KEY)  return res.status(500).json({ ok: false, error: "Brak BREVO_API_KEY" });
+    if (!BREVO_API_KEY) return res.status(500).json({ ok: false, error: "Brak BREVO_API_KEY" });
 
-    const mail = new brevo.SendSmtpEmail();
     const m = MAIL_FROM.match(/^(.*)<(.+)>$/);
     const senderName  = m ? m[1].trim() : MAIL_FROM;
     const senderEmail = m ? m[2].trim() : MAIL_FROM;
 
+    const mail = new brevo.SendSmtpEmail();
     mail.sender = { name: senderName, email: senderEmail };
     mail.to = [{ email: MAIL_TO }];
     mail.subject = `Rozliczenie godzin – ${name}`;
-    mail.htmlContent = `<p>W załączniku rozliczenie godzin.</p><p>Pracownik: <b>${name}</b></p>`;
-    mail.attachment = [{ name: "Tabela_Godzinowa.pdf", content: pdfData }];
+    mail.htmlContent = `<p>W załączniku rozliczenie godzin.</p><p><b>${name}</b></p>`;
+    mail.attachment = [{ name: "Tabela_Godzinowa.pdf", content: pdfData }]; // base64 bez prefixu
 
-    await apiInstance.sendTransacEmail(mail);
-    return res.json({ ok: true });
+    await emailApi.sendTransacEmail(mail);
+    res.json({ ok: true });
   } catch (e) {
     console.error("❌ Brevo error:", e?.response?.text || e.message);
-    return res.status(500).json({ ok: false, error: "Błąd wysyłki" });
+    res.status(500).json({ ok: false, error: "Błąd wysyłki" });
   }
 });
 
