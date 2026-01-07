@@ -47,6 +47,16 @@ header{background:#fff;border-bottom:1px solid #e5e7eb}
 <header>
   <div class="container py-3 d-flex justify-content-between align-items-center">
     <div class="brand h5 m-0"><i class="fas fa-clock me-2 text-primary"></i>Generator Godzin Emerlog</div>
+
+    <!-- PRZYCISKI NA GÓRZE -->
+    <div class="d-flex gap-2">
+      <a href="wnioski.html" class="btn btn-outline-secondary btn-sm">
+        <i class="fa fa-user-shield me-1"></i>Admin
+      </a>
+      <a href="dokumenty.html" class="btn btn-outline-primary btn-sm">
+        <i class="fa-regular fa-folder-open me-1"></i>Dokumenty
+      </a>
+    </div>
   </div>
 </header>
 
@@ -191,12 +201,7 @@ function distribute(total,n,min,max,variance){
 
 /* Dystrybucja końców: limit 20:00 do ~25% */
 function sampleEndDistribution(n){
-  const counts={
-    early: Math.max(1, Math.round(n*0.25)), // 14–16
-    mid:   Math.max(1, Math.round(n*0.40)), // 16–18
-    late:  Math.max(1, Math.round(n*0.20)), // 18–19
-    cap20: Math.max(0, Math.round(n*0.15))  // 20
-  };
+  const counts={early: Math.max(1, Math.round(n*0.25)),mid: Math.max(1, Math.round(n*0.40)),late: Math.max(1, Math.round(n*0.20)),cap20: Math.max(0, Math.round(n*0.15))};
   let pool=[];
   for(let i=0;i<counts.early;i++) pool.push(ri(14,16));
   for(let i=0;i<counts.mid;i++)   pool.push(ri(16,18));
@@ -315,9 +320,15 @@ function generate(){
     const iso=toISO(dt);
     const weekend=isWeekend(dt);
     const publicH=hset.has(iso);
+
+    // DODANE: 24 grudnia zawsze jako Święto (na potrzeby aplikacji)
+    const isDec24 = (dt.getMonth()===11 && dt.getDate()===24);
+
     const custom=customHolidays.find(x=>x.date===iso);
-    const isWork = (!weekend && !publicH && !custom);
-    const hol = publicH ? "Święto" : (custom ? custom.type : "");
+    const publicOrExtra = publicH || isDec24;
+
+    const isWork = (!weekend && !publicOrExtra && !custom);
+    const hol = publicOrExtra ? "Święto" : (custom ? custom.type : "");
     dayData.push({day:d,date:dt,isWorkingDay:isWork,holidayType:hol,hours:0,start:"-",end:"-"});
   }
 
